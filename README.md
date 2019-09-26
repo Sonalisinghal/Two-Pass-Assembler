@@ -1,5 +1,7 @@
 # Two-Pass-Assembler
-Computer Organisation Project 1: [Problem Statement](https://drive.google.com/file/d/1Nk27bWucDA3GjHa-ctjzw_sy3Gpo2gLi/view)
+Computer Organisation Project 1: 
+- [Problem Statement](https://drive.google.com/file/d/1Nk27bWucDA3GjHa-ctjzw_sy3Gpo2gLi/view)
+- [Sample Test File](https://drive.google.com/file/d/1i_Q7dkn1AObVsxCBYJJm97HxX9NX8i2t/view)
 
 ## Sample Codes:
 1. [What is two pass assembler - AyushOriginal Github repo readme](https://github.com/ayushoriginal/Two-pass-Assembler)
