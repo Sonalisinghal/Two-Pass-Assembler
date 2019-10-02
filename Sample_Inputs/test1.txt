@@ -1,4 +1,4 @@
-CLA
+CLA ; clears the accumulator
 INP 157
 INP 158
 LAC 157
