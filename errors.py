@@ -15,6 +15,10 @@ class IncorrectNumberofOperands(Error):
 	def __init__(self,op,num):
 		Error.__init__(self,str(op)+" requires "+str(opcode_arguments[op])+" operands. "+str(num)+" supplied")
 
+class RegisterExceed(Error):
+	def __init__(self,num):
+		Error.__init__(self,str(num)+" exceeds the number of registers. Maximum number of registers are __")
+
 class NoEnd(Error):
 	def __init__(self):
 		Error.__init__("Could not find END statement. Put END at the end of the assembly code")
