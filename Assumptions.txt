@@ -1,0 +1,17 @@
+Assumptions:
+1. Macro is defined at the top of the file before the code where macro is used
+2. Clear accumulator results in constant value 0 in the accumulator
+3. Symbol table contains only Labels since variables are not given
+4. All defined label names should be unique even for the macros else the code will throw multiple label definitions error
+
+Design:
+1. Data table contains all the addresses defined in the main code
+2. Macro table contains the macro definition and the opcodes used in it
+3. Opcode table is a list containing all the opcodes encountered in the main program stored in order 
+4. When a macro call is encountered, the opcodes present in the macro table for the respective macro definition is substituted in the main opcode table
+5. Symbol object
+6. Literal Object
+7. Data Set of addresses
+8. Opcode Object
+7. Macro table
+

@@ -7,17 +7,17 @@ class MultipleSymbolDefinitions(Error):
 	def __init__(self,sym):
 		Error.__init__(self,str(sym)+" symbol has been defined more than once")
 
-class MultipleRegisterDefinitions(Error):
-	def __init__(self,reg):
-		Error.__init__(self,str(reg)+" register has been defined more than once")
+# class MultipleRegisterDefinitions(Error):
+# 	def __init__(self,reg):
+# 		Error.__init__(self,str(reg)+" register has been defined more than once")
 
 class IncorrectNumberofOperands(Error):
 	def __init__(self,op,num):
 		Error.__init__(self,str(op)+" requires "+str(opcode_arguments[op])+" operands. "+str(num)+" supplied")
 
-class RegisterExceed(Error):
-	def __init__(self,num):
-		Error.__init__(self,str(num)+" exceeds the number of registers. Maximum number of registers are __")
+# class RegisterExceed(Error):
+# 	def __init__(self,num):
+# 		Error.__init__(self,str(num)+" exceeds the number of registers. Maximum number of registers are __")
 
 class NoEnd(Error):
 	def __init__(self):
@@ -46,6 +46,10 @@ class AddressIsLiteral(Error):
 class AddressIsInstruction(Error):     # can be encountered during runtime
 	def __init__(self,address):
 		Error.__init__(self,str(address)+" is a read only address as it contains an Instruction")
+
+class AddressUndefined(Error):
+	def __init__(self,address,op):
+		Error.__init__(self,"Cannot perform operation "+str(op)+" as "+str(addess)+" is undefined")
 
 
 class IllegalMacroName(Error):
