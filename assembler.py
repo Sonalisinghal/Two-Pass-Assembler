@@ -17,9 +17,6 @@ def containsLabel(token): #Checks for presence of label in first token of instru
 def addLabel(label, address): #Adds detected label to symbol table
 	symbolTable[label]=address
 
-#def addVariable():
-#	pass
-
 def addLiteral(literal): #Adds literals to Literal Table
 	literalTable[literal] = literal[1:-1]
 
@@ -35,17 +32,11 @@ def removeComments(instruction):
 		instruction = instruction[0:instruction.find(";")]
 	return(instruction)
 
-#def containsVariable(instruction): #Checks if passed instruction contains variables
-#	for token in instruction:
-
-
 def containsLiteral(instruction): #Checks if passed instruction contains literals
 	for token in instruction:
 		if(token[0]=="'" and token[-1]=="'"):
 			return(True)
-		else:
-			return(False)
-
+		
 def returnLiteral(instruction):
 	for token in instruction:
 		if(token[0]=="'" and token[-1]=="'"):
