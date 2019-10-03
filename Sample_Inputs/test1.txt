@@ -1,3 +1,8 @@
+ADDTWO MACRO A,B,C
+LAC A
+ADD B
+SAC C
+
 CLA ; clears the accumulator
 INP 157
 INP 158

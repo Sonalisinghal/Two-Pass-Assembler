@@ -1,12 +1,24 @@
 from opcodes import opcodes
 
-symbolTable = {}
-literalTable = {}
-opcodeTable = {}
+symbolTable = []
+literalTable = []
+opcodeTable = []
+macroTable = []
+#All tables initialized and to be used as lists of dictionaries
+
 instructions = []
 num_ins = 0
 
-bin8 = lambda x : ''.join(reversed([str((x >> i) & 1) for i in range(8)] ) )
+macroDefinition = False
+#flag to check if a macro is being defined
+
+bin12 = lambda x : ''.join(reversed([str((x >> i) & 1) for i in range(12)] ) )
+
+def checkMacro(instruction):
+	if("MACRO" in instruction):
+		macroDefinition = True
+	if("MEND" in Instruction or "MEND" in instruction):
+		macroDefinition = False
 
 def containsLabel(token): #Checks for presence of label in first token of instruction
 	if(token.find(":")!=-1):
@@ -15,10 +27,10 @@ def containsLabel(token): #Checks for presence of label in first token of instru
 		return(False)
 
 def addLabel(label, address): #Adds detected label to symbol table
-	symbolTable[label]=address
+	symbolTable.append({"symbol":label,"virtual_add": address, "physical_add":None})
 
 def addLiteral(literal): #Adds literals to Literal Table
-	literalTable[literal] = literal[1:-1]
+	literalTable.append({"literal":literal,"value":literal[1:-1],"physical_add":None})
 
 def removeComments(instruction):
 	'''
@@ -31,6 +43,7 @@ def removeComments(instruction):
 	if(instruction.find(";")!=(-1)):
 		instruction = instruction[0:instruction.find(";")]
 	return(instruction)
+
 
 def containsLiteral(instruction): #Checks if passed instruction contains literals
 	for token in instruction:
@@ -52,13 +65,22 @@ instruction = f.readline()
 while instruction:
 	instruction = removeComments(instruction)
 	instruction = list(instruction.split())
-	instruction = [bin8(num_ins)]+instruction
+	checkMacro(instruction)
+	while(macroDefinition):
+		add_to_macroTable(instruction)
+		break
+
+	instruction = [bin12(num_ins)]+list(removeComments(instruction).split())
 	instructions.append(instruction)
 	
 	if(containsLabel(instruction[1])):
 		addLabel(instruction[1][0:-1], instruction[0])
 	#if(containsVariable(instruction)):
 	#	pass
+
+	
+	
+
 	if(containsLiteral(instruction)):
 		print()
 		addLiteral(returnLiteral(instruction))
