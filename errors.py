@@ -35,9 +35,18 @@ class IllegalOpcode(Error):
 	def __init__(self,op):
 		Error.__init__(self,str(op)+" is not a valid opcode")
 
-class IllegalAddress(Error):
+class AddressOutOfBounds(Error):
 	def __init__(self,address):
 		Error.__init__(self,str(address)+" does not exist")
+
+class AddressIsLiteral(Error):
+	def __init__(self,address):
+		Error.__init__(self,str(address)+" is a read only address as it contains a constant")
+
+class AddressIsInstruction(Error):     # can be encountered during runtime
+	def __init__(self,address):
+		Error.__init__(self,str(address)+" is a read only address as it contains an Instruction")
+
 
 class IllegalMacroName(Error):
 	def __init__(self,mname):
