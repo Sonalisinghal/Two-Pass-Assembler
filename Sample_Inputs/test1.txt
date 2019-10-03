@@ -2,7 +2,7 @@ CLA ; clears the accumulator
 INP 157
 INP 158
 LAC 157
-SUB 158
+SUB '158'
 BRN L1
 DSP 157
 CLA
