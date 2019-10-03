@@ -15,6 +15,10 @@ class IncorrectNumberofOperands(Error):
 	def __init__(self,op,num):
 		Error.__init__(self,str(op)+" requires "+str(opcode_arguments[op])+" operands. "+str(num)+" supplied")
 
+class RegisterExceed(Error):
+	def __init__(self,num):
+		Error.__init__(self,str(num)+" exceeds the number of registers. Maximum number of registers are __")
+
 class NoEnd(Error):
 	def __init__(self):
 		Error.__init__("Could not find END statement. Put END at the end of the assembly code")
@@ -31,9 +35,18 @@ class IllegalOpcode(Error):
 	def __init__(self,op):
 		Error.__init__(self,str(op)+" is not a valid opcode")
 
-class IllegalAddress(Error):
+class AddressOutOfBounds(Error):
 	def __init__(self,address):
 		Error.__init__(self,str(address)+" does not exist")
+
+class AddressIsLiteral(Error):
+	def __init__(self,address):
+		Error.__init__(self,str(address)+" is a read only address as it contains a constant")
+
+class AddressIsInstruction(Error):     # can be encountered during runtime
+	def __init__(self,address):
+		Error.__init__(self,str(address)+" is a read only address as it contains an Instruction")
+
 
 class IllegalMacroName(Error):
 	def __init__(self,mname):
