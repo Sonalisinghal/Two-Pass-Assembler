@@ -22,16 +22,18 @@ class LiteralField:
 		print(self.literal,self.value,self.physicalAdd)
 
 class LabelField:
-	def __init__(self,virtualAdd):
+	def __init__(self,virtualAdd,code): #code = the function that the label belongs to main or name of macro
 		self.virtualAdd=virtualAdd
 		self.physicalAdd=None
+		self.code=code
 	def __str__(self):
 		print(self.virtualAdd,self.physicalAdd)
 
 class MacroField:
 	def __init__(self,macroparameters):
 		self.macroparameters=macroparameters
-		self.opcodeTable=[]
+		self.instructionTable=[]
+		self.labels=[]
 	def __str__(self):
 		print(self.macro,self.opcodeTable)
 		for i in opcodeTable:
@@ -43,6 +45,7 @@ symbolTable = {}
 literalTable = {}
 opcodeTable = []
 macroTable = []
+instructionTable=[]
 
 instructions = []
 num_ins = 0                      #counter to count number of instructions
@@ -63,22 +66,17 @@ def removeComments(instruction):
 
 bin12 = lambda x : ''.join(reversed([str((x >> i) & 1) for i in range(12)] ) )   #returns 12 bit binary address
 
-def checkMacro(instruction,foundMacroDefinition):
-	if("MACRO" in instruction):
-		return True
-	if("MEND" in instruction or "MEND" in instruction):
+def checkMacro(instruction):
+	if len(instruction)>=2:
+		if("MACRO" in instruction[1]):
+			return True
+	if("MEND" in instruction or "MEND" in instruction) and len(instruction)==1:
 		return False
-	return foundMacroDefinition
 
 def addMacro(macro,fields):
 	if macro not in macroTable:
 		macroTable[macro]=MacroField(fields)
 	#else throw double macro definition error
-def returnOpcode(instruction):
-
-
-def returnParameters(instruction):
-
 
 def addOpcode(instruction,otable,address):
 	opcode=returnOpcode(instruction)
@@ -95,37 +93,41 @@ def addOpcode(instruction,otable,address):
 
 		#else throw incorrectNumberofoperands error
 	#else throw illegal opcodes error
+
 def isValidAddress(address):
 	if address in dataTable:
 		return True
-
 	#else throw undefined address error
-def containsLabel(token): #Checks for presence of label in first token of instruction
-	if(token.find(":")!=-1):
-		return True 
+
+def getLabel(instruction):
+	if instruction[0].find(':')!=-1:
+		return instruction[0][:-1]
 	return False
 
 def addLabel(label, address): #Adds detected label to symbol table
-	# symbolTable.append({"symbol":label,"virtual_add": address, "physical_add":None})
 	if label not in symbolTable:
 		symbolTable[label]=LabelField(address)
 	#else throw double label defn error
 
-def containsLiteral(instruction): #Checks if passed instruction contains literals
-	for token in instruction:
-		if(token[0]=="'" and token[-1]=="'"):
-			return True
-
-def returnLiteral(instruction):       
+def getLiteral(instruction): #Checks if passed instruction contains literals
 	for token in instruction:
 		if(token[0]=="'" and token[-1]=="'"):
 			return(token)
+	return False
 
 def addLiteral(literal): #Adds literals to Literal Table
 	# literalTable.append({"literal":literal,"value":literal[1:-1],"physical_add":None})
 	if literal not in literalTable:
 		literalTable[literal]=LiteralField(literal)
 
+def refine(instruction):
+	instruction = instruction.upper()
+	instruction = removeComments(instruction)
+	instruction = list(instruction.split())
+	return instruction
+
+def breakInstruction(instruction):
+	pass
 
 #Opening file and initializing line, symbol, literal and opcode
 path = input("Enter file path: ")
@@ -134,31 +136,42 @@ f = open(path,'r')
 
 instruction = f.readline()
 while instruction:
-	print(instruction,len(instruction))
+	if instruction=="END":
+		break
 	if(len(instruction)==1):          #check for empty lines
 		instruction = f.readline()
 	
-	instruction = instruction.upper()
-	instruction = removeComments(instruction)
-	instruction = list(instruction.split())
+	instruction =refine(instruction)
 	
-	foundMacroDefinition=checkMacro(instruction,foundMacroDefinition)
+	foundMacroDefinition=checkMacro(instruction)
 	if(foundMacroDefinition):
-		add_to_macroTable(instruction)
+		s=''
+		name=instruction[0]
+		for i in range(2,len(instruction)):      ## find out all the parameters of the macro
+			s.append(instruction[i])
+		s=s.replace(' ','')
+		parameters=list(s.split(','))
+		addMacro(instruction[0],parameters)
+		instruction=f.readline()
+		while(!checkMacro(instruction)):
+			macroTable[name].instructionTable.append(instruction)
+			instruction=refine(instruction)
+			lab=getLabel(instruction)
+			if lab!=False:
+				macroTable[name].labels.append(lab)
+				LabelTable.add()
+
+
+	# 	add_to_macroTable(instruction)
+
 	
 	else:
-
 		instruction = [bin12(num_ins)]+instruction
 		instructions.append(instruction)
 		
 		if(containsLabel(instruction[1])):
 			addLabel(instruction[1][0:-1], instruction[0])
-		#if(containsVariable(instruction)):
-		#	pass
-
 		
-		
-
 		if(containsLiteral(instruction)):
 			print()
 			addLiteral(returnLiteral(instruction))
