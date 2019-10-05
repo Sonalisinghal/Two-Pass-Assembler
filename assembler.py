@@ -1,5 +1,5 @@
 from opcodes import opcodes,opcode_arguments
-
+import copy
 #######################classes required######################
 class OpcodeField:
 	def __init__(self,opcode,binary,virtual_add,operand1=None,operand2=None,operand3=None):
@@ -46,6 +46,7 @@ literalTable = {}
 opcodeTable = []
 macroTable = {}
 instructionTable=[]
+macroCallcount={}    #stores the number of calls for each macro present in the macro table
 
 instructions = []
 num_ins = 0                      #counter to count number of instructions
@@ -90,6 +91,11 @@ def checkMacro(instruction):
 def addMacro(macro,fields):
 	if macro not in macroTable:
 		macroTable[macro]=MacroField(fields)
+		macroCallcount[macro]=0
+	else:
+		print("Exception: MACRO ",macro," has been defined more than once.")
+		sys.exit()
+
 	#else throw double macro definition error
 
 # def addOpcode(instruction,otable,address):
@@ -118,17 +124,33 @@ def getLabel(instruction):
 		return instruction[0][:-1]
 	return False
 
-def addLabel(label, address): #Adds detected label to symbol table
-	if label not in labelTable
-		labelTable[label]=LabelField(address)
-	#else throw double label defn error
+def addLabel(label, address,code): #Adds detected label to symbol table
+	if label not in opcodes:           #check if label name is not a opcode name
+		hasMacroName=False
+		if code=="Main":
+			for x in macroTable.keys():       #check if label name is not a macro name
+				if label.find(x)!=-1:
+					hasMacroName=True
+			if hasMacroName==True:
+				print("Exception: Label name ",label,"is invalid as labels cannot have a Macro name in it.")
+				sys.exit()
+		else:
+			if label not in labelTable:        #check if label is not defined more than once
+				labelTable[label]=LabelField(address,code)
+			else:
+				print("Exception: Label name ",label," has been defined more than once.")
+				sys.exit()
+	else:
+		print("Exception: Label name cannot be an opcode name.",label,"is a valid opcode name")
+		sys.exit()
+
 def addData(parameters,opcode):       #Adds the parameters in the datatable and literal table
 	for i in parameters:
 		x=getLiteral(i)
 		if x!=False:
 			addLiteral(x)
 		else:
-			if i not in dataTable and opcode in ["INP","ADD","SUB","LAC","SAC","DSP","MUL","DIV"]:       ##as for branch, labels will be supplied which are already handled
+			if (i not in dataTable) and (opcode in ["INP","ADD","SUB","LAC","SAC","DSP","MUL","DIV"] or opcode in macroTable):       ##as for branch, labels will be supplied which are already handled
 				try:
 					i=int(i)
 				except:
@@ -163,14 +185,35 @@ def refine(instruction):
 def getVirtualAddress():
 	return bin12(num_ins)
 
+def handleMacroCalls(name,parameters,startingAddress):
+	macroCallcount[name]+=1
+	newLabelnames=[]
+	for i in macroTable[name].labels:
+		newLabelnames.append(name+i+macroCallcount)
+	copiedInstructionset=copy.deepcopy(macroTable[name].instructionTable)
+	for instruction in range(len(copiedInstructionset)):
+		instruction=refine(instruction)
+		label=getLabel(instruction)
+		if label!=False:
+			instruction[0].replace(label,newLabelnames[macroTable[name].labels.index(label)])
+			opcodeFrom=1
+		else:
+			opcodeFrom=0
+
+
+
+
+	return num_ins
+
 #Opening file and initializing line, symbol, literal and opcode
 path = input("Enter file path: ")
 path = "./Sample_Inputs/"+path+".txt"
 f = open(path,'r')
-
+endEncountered=False
 instruction = f.readline()
 while instruction:
 	if instruction=="END":            #if end is encountered, stop execution
+		endEncountered=True
 		break
 	if(len(instruction)==1):          #check for empty lines
 		instruction = f.readline()
@@ -232,6 +275,9 @@ while instruction:
 		num_ins+=1
 		instruction=f.readline()
 
+if endEncountered==False:
+	print("Exception: END of program not found. Please declare 'END' command at the end of the assembly program")
+	sys.exit()
 printInstructionTable()
 printMacroTable()
 

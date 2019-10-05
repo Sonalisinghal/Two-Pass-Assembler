@@ -11,7 +11,7 @@ Assumptions:
 	4. div should have first as defined address or constant, second and third can be defined or undefined address but not a constant
 
 7. The number of parameters supplied to macro = number of parameters supplied during call
-8. Label definition cannot be an opcode name
+8. Label name cannot be an opcode name and cannot have a Macro name anywhere in it. For example if ADDTWO is a macro, then: "SUB","ADD","ADDTWOXYZ" are invalid Labels.
 
 Design:
 1. Data table contains all the addresses defined in the main code
@@ -19,6 +19,7 @@ Design:
 -- do we need this? 3. Opcode table is a list containing all the opcodes encountered in the main program stored in order 
 4. When a macro call is encountered, the instructions present in the macro table for the respective macro definition is substituted in the main instruction table
 5. Explain the structure of the tables used
+6. All the commands are converted to upper case, to avoid case errors.
 
 Pseudocode for first pass:
 declare END found variable
