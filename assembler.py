@@ -41,7 +41,7 @@ class MacroField:
 
 #######################initialization########################
 dataTable={}
-symbolTable = {}
+labelTable = {}
 literalTable = {}
 opcodeTable = []
 macroTable = {}
@@ -58,8 +58,8 @@ def printMacroTable():
 		print(macroTable[i])
 def printDataTable():
 	print(dataTable)
-def printSymbolTable():
-	for i in symbolTable:
+def printLabelTable():
+	for i in labelTable:
 		print(i)
 def printInstructionTable():
 	for i in instructionTable:
@@ -119,8 +119,8 @@ def getLabel(instruction):
 	return False
 
 def addLabel(label, address): #Adds detected label to symbol table
-	if label not in symbolTable:
-		symbolTable[label]=LabelField(address)
+	if label not in labelTable
+		labelTable[label]=LabelField(address)
 	#else throw double label defn error
 def addData(parameters,opcode):       #Adds the parameters in the datatable and literal table
 	for i in parameters:
