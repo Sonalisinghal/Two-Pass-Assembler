@@ -230,28 +230,28 @@ def getValidAddress(num_ins):
 	dataset=list(dataTable.keys())
 	dataset=sorted(dataset)
 	maxInstructionSize=0
-	for i in instructionTable:
-		j=len(i)-1
-		insize=0
-		while(i[j] not in opcodes):
-			insize+=1
-			if(getLiteral(i[j])!=False):
-				insize+=literalTable[i[j]].size
-				insize-=1
-			j-=1
-		if maxInstructionSize<insize:
-			maxInstructionSize=insize
-	totalspaceneeded=totalIns*maxInstructionSize
+	# for i in instructionTable:
+	# 	j=len(i)-1
+	# 	insize=0
+	# 	while(i[j] not in opcodes):
+	# 		insize+=1
+	# 		if(getLiteral(i[j])!=False):
+	# 			insize+=literalTable[i[j]].size
+	# 			insize-=1
+	# 		j-=1
+	# 	if maxInstructionSize<insize:
+	# 		maxInstructionSize=insize
+	# totalspaceneeded=totalIns*maxInstructionSize
 	offset=False
 	for i in range(1,len(dataset)):
-		if (dataset[i]-dataset[i-1]>totalspaceneeded):
+		if (dataset[i]-dataset[i-1]>totalIns):
 			offset=dataset[i]+1
 			break
 	if offset==False:
 		print("Exception: Not enough space for complete program")
 		sys.exit()
 	else:
-		return offset,maxInstructionSize
+		return offset
 
 
 
