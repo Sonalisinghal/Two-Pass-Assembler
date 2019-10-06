@@ -1,32 +1,41 @@
 from opcodes import opcodes,opcode_arguments
 import copy
-#######################classes required######################
-class OpcodeField:
-	def __init__(self,opcode,binary,virtual_add,operand1=None,operand2=None,operand3=None):
-		self.opcode=opcode
-		self.binary=binary
-		self.operand1=operand1
-		self.operand2=operand2
-		self.operand3=operand3
-		self.virtualAdd=virtual_add
-		self.physicalAdd=None
-	def __str__(self):
-		l=[self.opcode,self.binary,self.operand1,self.operand2,self.operand3,self.virtualAdd,self.physicalAdd]
-		print(str(l))
+import sys
+## constant value can have a very big value ie greater than 4096, in such a case give it more memory addresses
 
+########################FIRST PASS######################
+'''
+Errors handled in first pass:
+ 1. Multiple macro definitions
+ 2. Invalid Label name (Label cannot have a macro name in it and it cannot be an opcode name)
+ 3. Multiple label definitions
+ 4. Address supplied should be of integer type.
+ 5. Address supplied should be lesser than 12 bits=4096.
+ 6. Incorrect number of parameters supplied in a macro
+ 7. Incorrect number of parameters supplied for an opcode
+ 8. END not found
+ 9. MEND/ENDM not found
+10. Invalid opcode name/Macro name
+
+'''
+#########classes required#########
 class LiteralField:
 	def __init__(self,literal):
 		self.value=literal.replace("'","")
+		self.size=1
+		i=1
+		while(2**(12*i)<float(self.value)):      #if the constant value is very large, allocate it more memory spaces
+			self.size+=1
 		self.physicalAdd=None
-	def __str__(self):
-		print(self.literal,self.value,self.physicalAdd)
+	def printThis(self):
+		print(self.value,self.physicalAdd)
 
 class LabelField:
 	def __init__(self,virtualAdd,code): #code = the function that the label belongs to main or name of macro
 		self.virtualAdd=virtualAdd
 		self.physicalAdd=None
 		self.code=code
-	def __str__(self):
+	def printThis(self):
 		print(self.virtualAdd,self.physicalAdd)
 
 class MacroField:
@@ -34,16 +43,15 @@ class MacroField:
 		self.macroparameters=macroparameters
 		self.instructionTable=[]
 		self.labels=[]
-	def __str__(self):
-		print(self.macroparameters,self.labels)
-		for i in instructionTable:
-			print(i)
+	def printThis(self):
+		print(str(self.macroparameters),str(self.labels))
+		for i in self.instructionTable:
+			print(str(i))
 
-#######################initialization########################
+#########Initialization#########
 dataTable={}
 labelTable = {}
 literalTable = {}
-opcodeTable = []
 macroTable = {}
 instructionTable=[]
 macroCallcount={}    #stores the number of calls for each macro present in the macro table
@@ -52,19 +60,36 @@ instructions = []
 num_ins = 0                      #counter to count number of instructions
 foundMacroDefinition=False       #flag to check if a macro is being defined
 
-##########################functions###########################
+#########Functions#########
+
+def printTables():      # prints all the tables generated
+	print("\nPrinting instruction table")
+	printInstructionTable()
+	print("\nPrinting macro table")
+	printMacroTable()
+	print("\nPrinting label table")
+	printLabelTable()
+	print("\nPrinting data table")
+	printDataTable()
+	print("\nPrinting literal table")
+	printLiteralTable()
 def printMacroTable():
 	for i in macroTable:
 		print(i)
-		print(macroTable[i])
+		macroTable[i].printThis()
 def printDataTable():
 	print(dataTable)
 def printLabelTable():
 	for i in labelTable:
 		print(i)
+		labelTable[i].printThis()
 def printInstructionTable():
 	for i in instructionTable:
 		print(i)
+def printLiteralTable():
+	for i in literalTable:
+		print(i)
+		literalTable[i].printThis()
 
 def removeComments(instruction):
 	'''
@@ -96,29 +121,6 @@ def addMacro(macro,fields):
 		print("Exception: MACRO ",macro," has been defined more than once.")
 		sys.exit()
 
-	#else throw double macro definition error
-
-# def addOpcode(instruction,otable,address):
-# 	opcode=returnOpcode(instruction)
-# 	if opcode in opcodes:
-# 		parameters=returnParameters(instruction)
-# 		if(len(parameters)==opcode_arguments[opcode]):
-# 			if len(parameters)==0:
-# 				of=OpcodeField(opcode,opcodes[opcode],address)
-# 			elif len(parameters)==1:
-# 				of=OpcodeField(opcode,opcodes[opcode],address,parameters[0])
-# 			elif len(parameters)==3:
-# 				of=OpcodeField(opcode,opcodes[opcode],address,parameters[0],parameters[1],parameters[2])
-# 			otable.append(of)
-
-# 		#else throw incorrectNumberofoperands error
-# 	#else throw illegal opcodes error
-
-def isValidAddress(address):
-	if address in dataTable:
-		return True
-	#else throw undefined address error
-
 def getLabel(instruction):
 	if instruction[0].find(':')!=-1:
 		return instruction[0][:-1]
@@ -134,12 +136,11 @@ def addLabel(label, address,code): #Adds detected label to symbol table
 			if hasMacroName==True:
 				print("Exception: Label name ",label,"is invalid as labels cannot have a Macro name in it.")
 				sys.exit()
+		if label not in labelTable:        #check if label is not defined more than once
+			labelTable[label]=LabelField(address,code)
 		else:
-			if label not in labelTable:        #check if label is not defined more than once
-				labelTable[label]=LabelField(address,code)
-			else:
-				print("Exception: Label name ",label," has been defined more than once.")
-				sys.exit()
+			print("Exception: Label name ",label," has been defined more than once.")
+			sys.exit()
 	else:
 		print("Exception: Label name cannot be an opcode name.",label,"is a valid opcode name")
 		sys.exit()
@@ -172,39 +173,63 @@ def getLiteral(token): #Checks if passed instruction contains literals
 	return False
 
 def addLiteral(literal): #Adds literals to Literal Table
-	# literalTable.append({"literal":literal,"value":literal[1:-1],"physical_add":None})
 	if literal not in literalTable:
 		literalTable[literal]=LiteralField(literal)
 
-def refine(instruction):
+def refine(instruction):  #Case handling and divide the instruction in Labels, opcode and parameters
 	instruction = instruction.upper()
 	instruction = removeComments(instruction)
 	instruction = list(instruction.split())
 	return instruction
 
-def getVirtualAddress():
+def getVirtualAddress(num_ins): #Returns a virtual 12-bit binary address for the instruction
 	return bin12(num_ins)
 
-def handleMacroCalls(name,parameters,startingAddress):
+def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the assembly program
+	# print("macro call encountered for",name,parameters)
 	macroCallcount[name]+=1
 	newLabelnames=[]
-	for i in macroTable[name].labels:
-		newLabelnames.append(name+i+macroCallcount)
+	for i in macroTable[name].labels:        #creates new label name set for the macro of the form macroName-
+		newLabelnames.append(str(name)+str(i)+str(macroCallcount[name]))
+	
 	copiedInstructionset=copy.deepcopy(macroTable[name].instructionTable)
-	for instruction in range(len(copiedInstructionset)):
-		instruction=refine(instruction)
+	# print("new label names are",newLabelnames)
+	if len(parameters)!=len(macroTable[name].macroparameters):
+		print("Exception: Macro",name,"takes",len(macroTable[name].macroparameters),"parameters but",len(parameters),"were given.")
+		sys.exit()
+	for instruction in copiedInstructionset:
+		# print("macro call",instruction)
+		vAddress=getVirtualAddress(num_ins)
 		label=getLabel(instruction)
 		if label!=False:
-			instruction[0].replace(label,newLabelnames[macroTable[name].labels.index(label)])
+			instruction[0]=newLabelnames[macroTable[name].labels.index(label)]+":"
+			addLabel(newLabelnames[macroTable[name].labels.index(label)],vAddress,name)
 			opcodeFrom=1
-		else:
+		else:     
 			opcodeFrom=0
+		
+		opcode=instruction[opcodeFrom]
+		for i in range(opcodeFrom+1,len(instruction)):
+			if instruction[i] in macroTable[name].labels:
+				instruction[i]=newLabelnames[macroTable[name].labels.index(instruction[i])]
+			else:
+				instruction[i]=parameters[macroTable[name].macroparameters.index(instruction[i])]
+		# print("modified macro instruction",instruction)
+		if opcode in opcodes:
+			if len(instruction[opcodeFrom+1:])==opcode_arguments[opcode]:
+				instructionTable.append([vAddress]+[instruction])
+				addData(instruction[opcodeFrom+1:],opcode)
+			else:
+				print("Exception:",opcode,"takes",opcode_arguments[opcode],"arguments but",len(instruction[opcodeFrom+1:]),"were given.")
+				sys.exit()
+		else:
+			print("Exception:",opcode,"is not a valid opcode name.")
+			sys.exit()
+		num_ins+=1
 
+	return num_ins-1
 
-
-
-	return num_ins
-
+#########Main code#########
 #Opening file and initializing line, symbol, literal and opcode
 path = input("Enter file path: ")
 path = "./Sample_Inputs/"+path+".txt"
@@ -212,7 +237,8 @@ f = open(path,'r')
 endEncountered=False
 instruction = f.readline()
 while instruction:
-	if instruction=="END":            #if end is encountered, stop execution
+	# print("main",instruction)
+	if instruction=="END\n":            #if end is encountered, stop execution
 		endEncountered=True
 		break
 	if(len(instruction)==1):          #check for empty lines
@@ -236,20 +262,24 @@ while instruction:
 				if(len(instruction)==1):          #check for empty lines
 					instruction = f.readline()
 				instruction=refine(instruction)
+				# print("appending in macro table",instruction)
 				macroTable[name].instructionTable.append(instruction)     #append all the instructions to macro's instruction table
 				labelsPresent=getLabel(instruction)                       #if the macro contains label, add them to the macros label table
 				if labelsPresent!=False:
 					macroTable[name].labels.append(labelsPresent)
 				instruction=f.readline()
 			except:
-				print("Exception: MEND/ENDM not specified after Macro definition")
+				print("Exception: MEND/ENDM not specified after Macro definition",name)
 				sys.exit()
+		instruction=f.readline()
 
 	else:	
 		num_ins+=1
-		vAddress=getVirtualAddress()
+		vAddress=getVirtualAddress(num_ins)
+		# print("getting address",vAddress)
 		label=getLabel(instruction)
 		if(label!=False):    #label is present
+			# print("trying to add",label)
 			addLabel(label, vAddress,"Main")
 			opcodeFrom=1
 		else:
@@ -257,84 +287,27 @@ while instruction:
 		opcode=instruction[opcodeFrom]
 		parameters=instruction[opcodeFrom+1:]
 		if opcode in macroTable:
-			startingAddress=vAddress
-				#handle macros here
+			num_ins=handleMacroCalls(opcode,parameters,num_ins)
 			
 		elif opcode in opcodes:
-			if len(parameters)==opcode_arguments[opcode]
-				instructionTable.append([vaddress+instruction])
+			if len(parameters)==opcode_arguments[opcode]:
+				instructionTable.append([vAddress]+[instruction])
+				addData(parameters,opcode)
 			else:
-				print("Exception: invalid combination of opcodes and arguments")
+				print("Exception: Opcode",opcode,"takes",opcode_arguments[opcode],"arguments but",len(parameters),"were given.")
 				sys.exit()
 		else:
-			print(opcode,"is not a valid opcode or a macro name.")
+			print("Exception:",opcode,"is not a valid opcode or a macro name.")
 			sys.exit()
 
-		addData(parameters,opcode)
 
-		num_ins+=1
 		instruction=f.readline()
 
 if endEncountered==False:
 	print("Exception: END of program not found. Please declare 'END' command at the end of the assembly program")
 	sys.exit()
-printInstructionTable()
-printMacroTable()
-
-
-
-
-#############pseudocode
-##declare END found variable
-##make a new file
-#while instruction is available and END is not encountered:
-##if intruction empty line
-###skip line
-##if end
-###break
-## is instruction a comment
-###if yes remove comments
-
-## is instruction macro definition
-###put macro definition in dictionary
-###while mend is not encountered
-####add the instruction to macro table/dictionary
-####nextline
-####if mend is not encountered at all then throw error
-
-##what is the length of the instruction
-
-##does instruction[0] have a label of the form li:
-###is label new?
-####if yes put it in the label tabel
-###else throw multiple definition error
-
-###in this case instruction[1] is opcode remaining is operand
-###else instruction[0] is opcode, remaining is operand
-
-##how many operands does the instruction have
-##which opcode does the instruction have
-###is the opcode a valid opcode
-###does the num of operands match the required numebr of operands for your opcode
-####if both yes put it in opcode table
-####write the instruction in a file
-####if no throw incorrect number of operands error
-###elseif is it a call to a macro
-###if yes put the parameters in a list
-###go to macro table and iterate over its instructions
-####substitute fields with given parameters
-####write substituted instruction in a file
-####put the opcode in the opcode table
-####put label in label table
-##else throw opcode undefined error
-
-#if mendencountered==false:
-##throw endnotencountered error
-
-##else throw undefined address
-
-##macros can have local labels
-
+print('######## SUCCESS: First pass ended successfully ########')
+printTables()
 
 
 ####keep in mind#######
