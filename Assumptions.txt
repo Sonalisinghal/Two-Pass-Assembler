@@ -21,6 +21,18 @@ Design:
 5. Explain the structure of the tables used
 6. All the commands are converted to upper case, to avoid case errors.
 
+Errors handled in first pass:
+ 1. Multiple macro definitions
+ 2. Invalid Label name (Label cannot have a macro name in it and it cannot be an opcode name)
+ 3. Multiple label definitions
+ 4. Address supplied should be of integer type.
+ 5. Address supplied should be lesser than 12 bits=4096.
+ 6. Incorrect number of parameters supplied in a macro
+ 7. Incorrect number of parameters supplied for an opcode
+ 8. END of program not found
+ 9. MEND/ENDM for macro not found
+10. Invalid opcode name/Macro name
+
 Pseudocode for first pass:
 declare END found variable
 
