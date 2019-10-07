@@ -129,7 +129,7 @@ def getLabel(instruction):    #Returns label if present in the instruction
 		return instruction[0][:-1]
 	return False
 
-def addLabel(label, address,code): #Adds detected label to label table
+def addLabel(label, address,code,instruction): #Adds detected label to label table
 	if label not in opcodes:           #check if label name is not a opcode name
 		hasMacroName=False
 		if code=="Main":
@@ -137,14 +137,17 @@ def addLabel(label, address,code): #Adds detected label to label table
 				if label.find(x)!=-1:
 					hasMacroName=True
 			if hasMacroName==True:
+				print("Error in instruction",*instruction)
 				print("Exception: Label",label,"is invalid as labels cannot have a Macro name in it.")
 				sys.exit()
 		if label not in labelTable:        #check if label is not defined more than once
 			labelTable[label]=LabelField(address,code)
 		else:
+			print("Error in instruction",*instruction)
 			print("Exception: Label",label,"has been defined more than once.")
 			sys.exit()
 	else:
+		print("Error in instruction",*instruction)
 		print("Exception: Label cannot be an opcode name.",label,"is a valid opcode name")
 		sys.exit()
 
@@ -158,20 +161,20 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 				try:
 					i=int(i)
 				except:
+					print("Error in instruction",opcode,*parameters)
 					print("Exception: Address supplied should be of integer type. Address",i,"is not a valid address.")
 					sys.exit()
 				if i not in dataTable:
 					if -1<i<4096:
 						if opcode=="INP":
-							print("this is a defined address",opcode,i)
 							dataTable[i]="defined"
 						# if opcode=="SAC" and len(instructionTable)>0:     ##if we consider that cla should result to 0 value, in which case store 0 would be a defined address
 						# 	if instructionTable[-1][-1]=="CLA":
 						# 		dataTable[i]="defined"
 						else:
-							print("this is a undefined address",opcode,i)
 							dataTable[i]="undefined"
 					else:
+						print("Error in instruction",opcode,*parameters)
 						print("Exception: Address supplied should be lesser than 12 bits=4096. Address",i,"is not a valid address.")
 						sys.exit()
 
@@ -202,6 +205,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 	
 	copiedInstructionset=copy.deepcopy(macroTable[name].instructionTable)
 	if len(parameters)!=len(macroTable[name].macroparameters):
+		print("Error in instruction",name,*parameters)
 		print("Exception: Macro",name,"takes",len(macroTable[name].macroparameters),"parameters but",len(parameters),"were given.")
 		sys.exit()
 	for instruction in copiedInstructionset:
@@ -209,7 +213,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		label=getLabel(instruction)
 		if label!=False:
 			instruction[0]=newLabelnames[macroTable[name].labels.index(label)]+":"
-			addLabel(newLabelnames[macroTable[name].labels.index(label)],vAddress,name)
+			addLabel(newLabelnames[macroTable[name].labels.index(label)],vAddress,name,instruction)
 			opcodeFrom=1
 		else:     
 			opcodeFrom=0
@@ -221,6 +225,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 			elif (instruction[i] in macroTable[name].macroparameters):
 				instruction[i]=parameters[macroTable[name].macroparameters.index(instruction[i])]     #substitute macro parameters with actual parameters
 			else:
+				print("Error in instruction",*instruction)
 				print("Exception: Unidentified symbol",instruction[i],"in macro",name)
 				sys.exit()
 		if opcode in opcodes:                           #check if correct number of operands are supplied in the macro
@@ -228,9 +233,11 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 				addData(instruction[opcodeFrom+1:],opcode)
 				instructionTable.append([vAddress]+[instruction])
 			else:
+				print("Error in instruction",*instruction)
 				print("Exception:",opcode,"takes",opcode_arguments[opcode],"arguments but",len(instruction[opcodeFrom+1:]),"were given.")
 				sys.exit()
 		else:
+			print("Error in instruction",*instruction)
 			print("Exception:",opcode,"is not a valid opcode name.")
 			sys.exit()
 		num_ins+=1
@@ -267,7 +274,6 @@ while instruction:
 	if(len(instruction)==1):          #check for empty lines
 		instruction = f.readline()
 		continue
-	
 	instruction =refine(instruction)
 	if len(instruction)==0:             #check if the line is just a comment
 		instruction = f.readline()
@@ -304,6 +310,7 @@ while instruction:
 				if labelsPresent not in macroTable[name].labels:
 					macroTable[name].labels.append(labelsPresent)
 				else:
+					print("Error in instruction",*instruction)
 					print("Exception: Label",labelsPresent,"has been defined multiple times for macro",name)   #if the label is declared multiple times in a macro
 					sys.exit()
 			instruction=f.readline()
@@ -314,7 +321,7 @@ while instruction:
 		vAddress=getVirtualAddress(num_ins)
 		label=getLabel(instruction)
 		if(label!=False):    #label is present
-			addLabel(label, vAddress,"Main")
+			addLabel(label, vAddress,"Main",instruction)
 			opcodeFrom=1
 		else:
 			opcodeFrom=0
@@ -328,9 +335,11 @@ while instruction:
 				addData(parameters,opcode)
 				instructionTable.append([vAddress]+[instruction])
 			else:
+				print("Error in instruction",*instruction)
 				print("Exception: Opcode",opcode,"takes",opcode_arguments[opcode],"arguments but",len(parameters),"were given.")
 				sys.exit()
 		else:
+			print("Error in instruction",*instruction)
 			print("Exception:",opcode,"is not a valid opcode or a macro name.")
 			sys.exit()
 		instruction=f.readline()
