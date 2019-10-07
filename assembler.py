@@ -245,24 +245,6 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 	return num_ins-1
 
 
-def getValidAddress(num_ins):
-	totalIns=num_ins+1
-	dataset=list(dataTable.keys())
-	dataset=sorted(dataset)
-	maxInstructionSize=0
-	offset=False
-	for i in range(1,len(dataset)):
-		if (dataset[i]-dataset[i-1]>totalIns):
-			offset=dataset[i-1]+1
-			break
-	if offset==False:
-		print("Exception: Not enough space for complete program")
-		sys.exit()
-	else:
-		return offset
-
-
-
 #########Main code#########
 path = input("Enter file path: ")
 path = "./Sample_Inputs/"+path+".txt"     #Opening file and initializing line, symbol, literal and opcode
@@ -354,8 +336,23 @@ print('######## SUCCESS: First pass ended successfully ########')
 
 
 ########################SECOND PASS######################
+def getValidAddress(num_ins):
+	totalIns=num_ins+1
+	dataset=list(dataTable.keys())
+	dataset=sorted(dataset)
+	#maxInstructionSize=0
+	offset=False
+	for i in range(1,len(dataset)):
+		if (dataset[i]-dataset[i-1]>totalIns):
+			offset=dataset[i-1]+1
+			break
+	if offset==False:
+		print("Exception: Not enough space for complete program")
+		sys.exit()
+	else:
+		return offset
 
-def addOffset():
+def addOffset(offset):
 	'''
 	Maps the instructions and labels in Instruction Table and Label Table to
 	physical addresses by adding offset
@@ -365,16 +362,61 @@ def addOffset():
 	for j in labelTable:
 		labelTable[j].physicalAdd = bin12(int(labelTable[j].virtualAdd,2)+offset)
 
+def getLiteralPool(offset,num_ins):
+	totalMem = 0
+	startAdd = False
+	for i in literalTable:
+		totalMem+=literalTable[i].size
+	occAddresses=list(dataTable.keys())
+	for j in range(0,num_ins):
+		occAddresses+=[j+offset]
+	occAddresses = sorted(occAddresses)
+	for k in range(1,len(occAddresses)):
+		if (occAddresses[k]-occAddresses[k-1]>totalMem):
+			startAdd=occAddresses[k-1]+1
+			break
+	if startAdd==False:
+		print("Exception: Not enough space for complete program")
+		sys.exit()
+	else:
+		return startAdd
 
+def assignLiteralPool(startAdd):
+	nextAdd = startAdd
+	for i in literalTable:
+		literalTable[i].physicalAdd = nextAdd
+		nextAdd+=literalTable[i].size
 
+def removeLabelDefinitions():
+	for i in range(0,len(instructionTable)):
+		if(instructionTable[i][1][0].find(":")!=(-1)):
+			del instructionTable[i][1][0]
+
+def convertOpcodes():
+	for i in range(0,len(instructionTable)):
+		instruction = instructionTable[i][1]
+		code = instructionTable[i][1][0]
+		instructionTable[i][1][0] = opcodes[code]
+		if(code=='ADD' or code=='MUL' or code=='LAC' or code=='DSP' or code=='SUB'):
+			if(instruction[1] in literalTable):
+				pass
+			elif(dataTable[instruction[1]]=='undefined'):
+					print("Error in instruction",*instruction)
+					print("Exception: "+code, "cannot have undefined address as operand")
+			elif(dataTable[instruction[1]]!='undefined'): 
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "has invalid operand")
 
 
 ############MAIN CODE##############
 offset = getValidAddress(num_ins)
-#print("Offset", offset)
-addOffset()
-#print(instructionTable)
-printLiteralTable()
+addOffset(offset)
+literalPoolAdd = getLiteralPool(offset,num_ins)
+assignLiteralPool(literalPoolAdd)
+removeLabelDefinitions()
+print(literalTable)
+convertOpcodes()
+#printTables()
 
 
 
@@ -386,11 +428,11 @@ printLiteralTable()
 
 
 #____________________PSEUDO CODE FOR SECOND PASS__________________
-#Add offset to instructions and labels
-#Find location for literals (have to deal with literals > 12 bits)
-#Remove labels from label definitions in instructions
+#|X| Add offset to instructions and labels
+#|X| Find location for literals (have to deal with literals > 12 bits)
+#|X| Remove labels from label definitions in instructions
 #Traverse instruction by instruction:
-	#Convert opcode to m/c
+	#|X| Convert opcode to m/c
 	#Based upon opcode, check if the parameters are allowed:
 		#Refer to (keep in mind) points
 	#Convert parameters to valid addresses using:
@@ -398,3 +440,9 @@ printLiteralTable()
 		#label table
 		#literal table
 #Write the m/c to a file (named as testX_output.txt)
+
+
+#__________________POINTS TO DISCUSS________________________
+#Where to have the literal pool?
+#Segmentation of code?
+#Returning starting address for literals that consume more space
