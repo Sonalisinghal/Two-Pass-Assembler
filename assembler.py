@@ -376,8 +376,25 @@ addOffset()
 #print(instructionTable)
 printLiteralTable()
 
+
+
 ####keep in mind#######
 ##for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
 ##brn , brz, brp should have a defined valid label (pass 2)
 ##sac,inp should have a defined or undefined address (not a constant)
-##div should have first as defined address or constand, second and third can be defined or undefined address but not a constant
+##div should have first as defined address or constant, second and third can be defined or undefined address but not a constant
+
+
+#____________________PSEUDO CODE FOR SECOND PASS__________________
+#Add offset to instructions and labels
+#Find location for literals (have to deal with literals > 12 bits)
+#Remove labels from label definitions in instructions
+#Traverse instruction by instruction:
+	#Convert opcode to m/c
+	#Based upon opcode, check if the parameters are allowed:
+		#Refer to (keep in mind) points
+	#Convert parameters to valid addresses using:
+		#data table
+		#label table
+		#literal table
+#Write the m/c to a file (named as testX_output.txt)
