@@ -1,6 +1,6 @@
 Assumptions:
 1. Macro is defined at the top of the file before the code where macro is used
-2. Clear accumulator results in constant value 0 in the accumulator
+2. Clear accumulator resets the accumulator. No address is present in the accumulator
 3. Label table is used instead of symbol table as variables are not given, here symbol table will only have labels
 4. Execution stops after the end statement. The code written after the end statement is not executed.
 5. The maximum memory size= 12 bits
@@ -12,6 +12,7 @@ Assumptions:
 
 7. The number of parameters supplied to macro = number of parameters supplied during call
 8. Label name cannot be an opcode name and cannot have a Macro name anywhere in it. For example if ADDTWO is a macro, then: "SUB","ADD","ADDTWOXYZ" are invalid Labels.
+9. Comments ca be added with the help of ; or /
 
 Design:
 1. Data table contains all the addresses defined in the main code
@@ -76,4 +77,8 @@ while instruction is available and END is not encountered:
 				put label in label table
 				handle errors
 		if no throw incorrect number of operands error
+
+
+
+Instruction add on every error
 
