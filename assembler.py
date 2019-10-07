@@ -16,6 +16,7 @@ Errors handled in first pass:
  8. END of program not found
  9. MEND/ENDM for macro not found
 10. Invalid opcode name/Macro name
+11. Unidentified symbol used in a macro
 
 '''
 #########classes required#########
@@ -210,8 +211,11 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		for i in range(opcodeFrom+1,len(instruction)):
 			if instruction[i] in macroTable[name].labels:       #if label found, substitute it with the new label
 				instruction[i]=newLabelnames[macroTable[name].labels.index(instruction[i])]
-			else:
+			elif (instruction[i] in macroTable[name].macroparameters):
 				instruction[i]=parameters[macroTable[name].macroparameters.index(instruction[i])]     #substitute macro parameters with actual parameters
+			else:
+				print("Exception: Unidentified symbol",instruction[i],"in macro",name)
+				sys.exit()
 		if opcode in opcodes:                           #check if correct number of operands are supplied in the macro
 			if len(instruction[opcodeFrom+1:])==opcode_arguments[opcode]:
 				instructionTable.append([vAddress]+[instruction])
