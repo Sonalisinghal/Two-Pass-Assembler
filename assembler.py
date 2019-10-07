@@ -243,6 +243,8 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		num_ins+=1
 
 	return num_ins-1
+
+
 def getValidAddress(num_ins):
 	totalIns=num_ins+1
 	dataset=list(dataTable.keys())
@@ -251,7 +253,7 @@ def getValidAddress(num_ins):
 	offset=False
 	for i in range(1,len(dataset)):
 		if (dataset[i]-dataset[i-1]>totalIns):
-			offset=dataset[i]+1
+			offset=dataset[i-1]+1
 			break
 	if offset==False:
 		print("Exception: Not enough space for complete program")
@@ -348,8 +350,31 @@ if endEncountered==False:
 	print("Exception: END of program not found. Please declare 'END' command at the end of the assembly program")
 	sys.exit()
 print('######## SUCCESS: First pass ended successfully ########')
-printTables()
+#printTables()
 
+
+########################SECOND PASS######################
+
+def addOffset():
+	'''
+	Maps the instructions and labels in Instruction Table and Label Table to
+	physical addresses by adding offset
+	'''
+	for i in range(0,len(instructionTable)):
+		instructionTable[i][0] = bin12(int(instructionTable[i][0],2)+offset)
+	for j in labelTable:
+		labelTable[j].physicalAdd = bin12(int(labelTable[j].virtualAdd,2)+offset)
+
+
+
+
+
+############MAIN CODE##############
+offset = getValidAddress(num_ins)
+#print("Offset", offset)
+addOffset()
+#print(instructionTable)
+printLiteralTable()
 
 ####keep in mind#######
 ##for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
