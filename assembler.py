@@ -247,8 +247,8 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 
 #########Main code#########
 path = input("Enter file path: ")
-path = "./Sample_Inputs/"+path+".txt"     #Opening file and initializing line, symbol, literal and opcode
-f = open(path,'r')
+path = "./Sample_Inputs/"+path    #Opening file and initializing line, symbol, literal and opcode
+f = open(path+".txt",'r')
 endEncountered=False
 instruction = f.readline()
 while instruction:
@@ -426,6 +426,36 @@ def convertOpcodes():
 		code = instructionTable[i][1][0]
 		instructionTable[i][1][0] = opcodes[code]
 
+def convertOperands():
+	for i in range(0,len(instructionTable)):
+		instruction = instructionTable[i][1]
+		for k in range(1,len(instruction)):
+			if(instruction[k] in labelTable):
+				instructionTable[i][1][k] = labelTable[instruction[k]].physicalAdd
+			elif(instruction[k] in literalTable):
+				instructionTable[i][1][k] = bin12(literalTable[instruction[k]].physicalAdd)
+			elif(int(instruction[k]) in dataTable):
+				instructionTable[i][1][k] = bin12(int(instruction[k]))
+
+def writeToFile():
+	f = open(path+"_output.txt","w+")
+	for i in range(0,len(instructionTable)):
+		instruction = instructionTable[i][1]
+		s = ''
+		for k in range(0,len(instruction)):
+			s+=instruction[k]
+		l = (len(s))
+		block = 0
+		machine_ins = ''
+		while(block!=l):
+			machine_ins+=s[block:block+4]+" "
+			block+=4
+		machine_ins+="\n"
+		f.write(machine_ins)
+		print(machine_ins)
+	f.close()
+
+
 ############MAIN CODE##############
 offset = getValidAddress(num_ins)
 addOffset(offset)
@@ -434,7 +464,9 @@ assignLiteralPool(literalPoolAdd)
 removeLabelDefinitions()
 checkOperands()
 convertOpcodes()
-printTables()
+convertOperands()
+writeToFile()
+#printTables()
 
 
 
@@ -442,22 +474,22 @@ printTables()
 ## |X| for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
 ## |X| brn , brz, brp should have a defined valid label (pass 2)
 ## |X| sac,inp should have a defined or undefined address (not a constant)
-##div should have first as defined address or constant, second and third can be defined or undefined address but not a constant
+## |X| div should have first as defined address or constant, second and third can be defined or undefined address but not a constant
 
 
 #____________________PSEUDO CODE FOR SECOND PASS__________________
 #|X| Add offset to instructions and labels
 #|X| Find location for literals (have to deal with literals > 12 bits)
 #|X| Remove labels from label definitions in instructions
-#Traverse instruction by instruction:
+#|X| Traverse instruction by instruction:
 	#|X| Convert opcode to m/c
 	#|X| Based upon opcode, check if the parameters are allowed:
 		#Refer to (keep in mind) points
-	#Convert parameters to valid addresses using:
+	#|X| Convert parameters to valid addresses using:
 		#data table
 		#label table
 		#literal table
-#Write the m/c to a file (named as testX_output.txt)
+#|X| Write the m/c to a file (named as testX_output.txt)
 
 
 #__________________POINTS TO DISCUSS________________________
@@ -489,5 +521,8 @@ printTables()
 	L2: STP
 	END
 '''
+
+
 #Can we report the number of errors and print a stack instead
 #	of throwing errors one by one
+# START? END or STP?
