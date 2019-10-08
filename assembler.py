@@ -392,21 +392,39 @@ def removeLabelDefinitions():
 		if(instructionTable[i][1][0].find(":")!=(-1)):
 			del instructionTable[i][1][0]
 
+def checkOperands():
+	for i in range(0,len(instructionTable)):
+		instruction = instructionTable[i][1]
+		code = instructionTable[i][1][0]
+		if(code=='ADD' or code=='MUL' or code=='LAC' or code=='DSP' or code=='SUB'):
+			if(instruction[1] in literalTable):
+				pass
+			elif(dataTable[int(instruction[1])]=='undefined'):
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "cannot have undefined address as operand.")
+		if(code=='BRN' or code=='BRP' or code=='BRZ'):
+			if(instruction[1] not in labelTable):
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "has an undeclared label: "+instruction[1]+" as operand.")
+		if(code=='SAC' or code=='INP'):
+			if(instruction[1] in literalTable):
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "can only have address as operand.")
+		if(code=='DIV'):
+			if(instruction[1] in literalTable):
+				pass
+			elif(dataTable[int(instruction[1])]=='undefined'):
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "should have first operand as defined address or constant. "+instruction[1]+" is an undefined address.")
+			if(instruction[2] in literalTable or instruction[3] in literalTable):
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "should have second and third operands as valid addresses.")
+
 def convertOpcodes():
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
 		code = instructionTable[i][1][0]
 		instructionTable[i][1][0] = opcodes[code]
-		if(code=='ADD' or code=='MUL' or code=='LAC' or code=='DSP' or code=='SUB'):
-			if(instruction[1] in literalTable):
-				pass
-			elif(dataTable[instruction[1]]=='undefined'):
-					print("Error in instruction",*instruction)
-					print("Exception: "+code, "cannot have undefined address as operand")
-			elif(dataTable[instruction[1]]!='undefined'): 
-				print("Error in instruction",*instruction)
-				print("Exception: "+code, "has invalid operand")
-
 
 ############MAIN CODE##############
 offset = getValidAddress(num_ins)
@@ -414,16 +432,16 @@ addOffset(offset)
 literalPoolAdd = getLiteralPool(offset,num_ins)
 assignLiteralPool(literalPoolAdd)
 removeLabelDefinitions()
-print(literalTable)
+checkOperands()
 convertOpcodes()
-#printTables()
+printTables()
 
 
 
 ####keep in mind#######
-##for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
-##brn , brz, brp should have a defined valid label (pass 2)
-##sac,inp should have a defined or undefined address (not a constant)
+## |X| for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
+## |X| brn , brz, brp should have a defined valid label (pass 2)
+## |X| sac,inp should have a defined or undefined address (not a constant)
 ##div should have first as defined address or constant, second and third can be defined or undefined address but not a constant
 
 
@@ -433,7 +451,7 @@ convertOpcodes()
 #|X| Remove labels from label definitions in instructions
 #Traverse instruction by instruction:
 	#|X| Convert opcode to m/c
-	#Based upon opcode, check if the parameters are allowed:
+	#|X| Based upon opcode, check if the parameters are allowed:
 		#Refer to (keep in mind) points
 	#Convert parameters to valid addresses using:
 		#data table
@@ -446,3 +464,30 @@ convertOpcodes()
 #Where to have the literal pool?
 #Segmentation of code?
 #Returning starting address for literals that consume more space
+# MULTWO 157 158 19 shows 19 as an undefined address and gives error for DSP 19
+'''
+	MULTWO MACRO A,B,C
+	LAC A
+	L4: MUL B
+	SAC C
+	BRN L4
+	MEND
+
+	CLA; clears the accumulator
+	INP 157
+	INP 158
+	MULTWO 157 158 19
+	L1: LAC 157
+	BRN L1
+	DSP 19
+	INP 170
+	INP 180
+	CLA
+	MULTWO 158 170 180
+	CLA
+	BRZ L2
+	L2: STP
+	END
+'''
+#Can we report the number of errors and print a stack instead
+#	of throwing errors one by one
