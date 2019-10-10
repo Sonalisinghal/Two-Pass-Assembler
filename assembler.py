@@ -138,7 +138,7 @@ def addLabel(label, address,code,instruction): #Adds detected label to label tab
 					hasMacroName=True
 			if hasMacroName==True:
 				print("Error in instruction",*instruction)
-				print("Exception: Label",label,"is invalid as labels cannot have a Macro name in it.")
+				print("Exception: Label",label,"is invalid as labels cannot have same name as a MACRO.")
 				sys.exit()
 		if label not in labelTable:        #check if label is not defined more than once
 			labelTable[label]=LabelField(address,code)
@@ -148,7 +148,7 @@ def addLabel(label, address,code,instruction): #Adds detected label to label tab
 			sys.exit()
 	else:
 		print("Error in instruction",*instruction)
-		print("Exception: Label cannot be an opcode name.",label,"is a valid opcode name")
+		print("Exception: Label cannot be an opcode name.",label,"is an opcode name.")
 		sys.exit()
 
 def addData(parameters,opcode):       #Adds the parameters in the datatable and literal table
@@ -166,7 +166,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 					sys.exit()
 				if i not in dataTable:
 					if -1<i<4096:
-						if opcode=="INP":
+						if opcode=="INP" or opcode=="SAC":
 							dataTable[i]="defined"
 						# if opcode=="SAC" and len(instructionTable)>0:     ##if we consider that cla should result to 0 value, in which case store 0 would be a defined address
 						# 	if instructionTable[-1][-1]=="CLA":
@@ -175,7 +175,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							dataTable[i]="undefined"
 					else:
 						print("Error in instruction",opcode,*parameters)
-						print("Exception: Address supplied should be lesser than 12 bits=4096. Address",i,"is not a valid address.")
+						print("Exception: Address supplied exceeds memory limit. It should be lesser than 12 bits, that is 4096. Address",i,"is not a valid address.")
 						sys.exit()
 
 
@@ -226,7 +226,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 				instruction[i]=parameters[macroTable[name].macroparameters.index(instruction[i])]     #substitute macro parameters with actual parameters
 			else:
 				print("Error in instruction",*instruction)
-				print("Exception: Unidentified symbol",instruction[i],"in macro",name)
+				print("Exception: Unidentified symbol",instruction[i],"in MACRO",name+".")
 				sys.exit()
 		if opcode in opcodes:                           #check if correct number of operands are supplied in the macro
 			if len(instruction[opcodeFrom+1:])==opcode_arguments[opcode]:
@@ -259,7 +259,7 @@ while instruction:
 		instruction = f.readline()
 		continue
 	instruction =refine(instruction)
-	if len(instruction)==0:             #check if the line is just a comment
+	if len(instruction)==0 or instruction[0]=='START':             #check if the line is just a comment
 		instruction = f.readline()
 		continue
 	
@@ -329,7 +329,7 @@ while instruction:
 		instruction=f.readline()
 
 if endEncountered==False:
-	print("Exception: END of program not found. Please declare 'END' command at the end of the assembly program")
+	print("Exception: END of program not found. Please declare 'END' command at the end of the assembly program.")
 	sys.exit()
 print('######## SUCCESS: First pass ended successfully ########')
 #printTables()
@@ -493,10 +493,10 @@ writeToFile()
 
 
 #__________________POINTS TO DISCUSS________________________
-#Where to have the literal pool?
-#Segmentation of code?
-#Returning starting address for literals that consume more space
-# MULTWO 157 158 19 shows 19 as an undefined address and gives error for DSP 19
+#|X| Where to have the literal pool?
+#|X| Segmentation of code?
+#|X| Returning starting address for literals that consume more space
+#|X| MULTWO 157 158 19 shows 19 as an undefined address and gives error for DSP 19
 '''
 	MULTWO MACRO A,B,C
 	LAC A
@@ -525,4 +525,4 @@ writeToFile()
 
 #Can we report the number of errors and print a stack instead
 #	of throwing errors one by one
-# START? END or STP?
+# |X| START? END or STP?
