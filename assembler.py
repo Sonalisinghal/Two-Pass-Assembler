@@ -121,6 +121,7 @@ def addMacro(macro,fields):   #Add macro to Macro table
 		macroTable[macro]=MacroField(fields)
 		macroCallcount[macro]=0
 	else:
+		print("Error in instruction",macro,*fields)
 		print("Exception: MACRO ",macro," has been defined more than once.")
 		sys.exit()
 
