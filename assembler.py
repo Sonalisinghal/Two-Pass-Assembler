@@ -16,6 +16,7 @@ Errors handled in first pass:
  9. MEND/ENDM for macro not found
 10. Invalid opcode name/Macro name
 11. Unidentified symbol used in a macro
+12. Defined label names cannot be used as variable names and vice versa
 
 '''
 #########classes required#########
@@ -147,29 +148,35 @@ def getLabel(instruction):    #Returns label if present in the instruction
 
 def addLabel(label, address,code,instruction): #Adds detected label to label table
 	global exceptionFlag
-	if label not in opcodes:           #check if label name is not a opcode name
-		hasMacroName=False
-		if code=="Main":
-			for x in macroTable.keys():       #check if label name is not a macro name
-				if label.find(x)!=-1:
-					hasMacroName=True
-			if hasMacroName==True:
+	if label in symbolTable:
+		exceptionFlag=True
+		print("Error in instruction",*instruction)
+		print("Exception: Label",label," has also been used as a Variable.")
+
+	else:
+		if label not in opcodes:           #check if label name is not a opcode name
+			hasMacroName=False
+			if code=="Main":
+				for x in macroTable.keys():       #check if label name is not a macro name
+					if label.find(x)!=-1:
+						hasMacroName=True
+				if hasMacroName==True:
+					exceptionFlag=True
+					print("Error in instruction",*instruction)
+					print("Exception: Label",label,"is invalid as labels cannot have same name as a MACRO.")
+					# sys.exit()
+			if label not in labelTable:        #check if label is not defined more than once
+				labelTable[label]=LabelField(address,code)
+			else:
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
-				print("Exception: Label",label,"is invalid as labels cannot have same name as a MACRO.")
+				print("Exception: Label",label,"has been defined more than once.")
 				# sys.exit()
-		if label not in labelTable:        #check if label is not defined more than once
-			labelTable[label]=LabelField(address,code)
 		else:
 			exceptionFlag=True
 			print("Error in instruction",*instruction)
-			print("Exception: Label",label,"has been defined more than once.")
+			print("Exception: Label cannot be an opcode name.",label,"is an opcode name.")
 			# sys.exit()
-	else:
-		exceptionFlag=True
-		print("Error in instruction",*instruction)
-		print("Exception: Label cannot be an opcode name.",label,"is an opcode name.")
-		# sys.exit()
 
 def addData(parameters,opcode):       #Adds the parameters in the datatable and literal table
 	global exceptionFlag
@@ -197,7 +204,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							# sys.exit()
 				except:
 					if (opcode in ["INP","ADD","SUB","LAC","SAC","DSP","MUL","DIV"]): 
-						if parameters[i] not in LabelTable:
+						if parameters[i] not in labelTable:
 							if parameters[i] not in symbolTable:
 								symbolTable[parameters[i]]=SymbolField()
 						else:
