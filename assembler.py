@@ -140,7 +140,7 @@ def addMacro(macro,fields):   #Add macro to Macro table
 		exceptionFlag=True
 		print("Error in instruction",macro,*fields)
 		print("Exception: MACRO ",macro," has been defined more than once.")
-		# sys.exit()
+		sys.exit()
 
 def getLabel(instruction):    #Returns label if present in the instruction
 	if instruction[0].find(':')!=-1:
@@ -165,19 +165,19 @@ def addLabel(label, address,code,instruction): #Adds detected label to label tab
 					exceptionFlag=True
 					print("Error in instruction",*instruction)
 					print("Exception: Label",label,"is invalid as labels cannot have same name as a MACRO.")
-					# sys.exit()
+					sys.exit()
 			if label not in labelTable:        #check if label is not defined more than once
 				labelTable[label]=LabelField(address,code)
 			else:
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: Label",label,"has been defined more than once.")
-				# sys.exit()
+				sys.exit()
 		else:
 			exceptionFlag=True
 			print("Error in instruction",*instruction)
 			print("Exception: Label cannot be an opcode name.",label,"is an opcode name.")
-			# sys.exit()
+			sys.exit()
 
 def addData(parameters,opcode):       #Adds the parameters in the datatable and literal table
 	global exceptionFlag
@@ -208,6 +208,8 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 						if parameters[i] not in labelTable:
 							if parameters[i] not in symbolTable:
 								symbolTable[parameters[i]]=SymbolField()
+								if(opcode in ["INP","SAC"]):
+									symbolTable[parameters[i]].status = "defined"
 						else:
 							exceptionFlag=True
 							print("Error in instruction",opcode,*parameters)
@@ -243,7 +245,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		exceptionFlag=True
 		print("Error in instruction",name,*parameters)
 		print("Exception: Macro",name,"takes",len(macroTable[name].macroparameters),"parameters but",len(parameters),"were given.")
-		# sys.exit()
+		sys.exit()
 	for instruction in copiedInstructionset:
 		vAddress=getVirtualAddress(num_ins)             
 		label=getLabel(instruction)
@@ -264,7 +266,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: Unidentified symbol",instruction[i],"in MACRO",name+".")
-				# sys.exit()
+				sys.exit()
 		if opcode in opcodes:                           #check if correct number of operands are supplied in the macro
 			if len(instruction[opcodeFrom+1:])==opcode_arguments[opcode]:
 				addData(instruction[opcodeFrom+1:],opcode)
@@ -273,12 +275,12 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception:",opcode,"takes",opcode_arguments[opcode],"arguments but",len(instruction[opcodeFrom+1:]),"were given.")
-				# sys.exit()
+				sys.exit()
 		else:
 			exceptionFlag=True
 			print("Error in instruction",*instruction)
 			print("Exception:",opcode,"is not a valid opcode name.")
-			# sys.exit()
+			sys.exit()
 		num_ins+=1
 
 	return num_ins-1
@@ -337,7 +339,7 @@ while instruction:
 					exceptionFlag=True
 					print("Error in instruction",*instruction)
 					print("Exception: Label",labelsPresent,"has been defined multiple times for macro",name)   #if the label is declared multiple times in a macro
-					# sys.exit()
+					sys.exit()
 			instruction=f.readline()
 		instruction=f.readline()
 
@@ -363,21 +365,21 @@ while instruction:
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: Opcode",opcode,"takes",opcode_arguments[opcode],"arguments but",len(parameters),"were given.")
-				# sys.exit()
+				sys.exit()
 		else:
 			exceptionFlag=True
 			print("Error in instruction",*instruction)
 			print("Exception:",opcode,"is not a valid opcode or a macro name.")
-			# sys.exit()
+			sys.exit()
 		instruction=f.readline()
 
 if endEncountered==False:
 	exceptionFlag=True
 	print("Exception: END of program not found. Please declare 'END' command at the end of the assembly program.")
-	# sys.exit()
+	sys.exit()
 if exceptionFlag==False:
 	print('######## SUCCESS: First pass ended successfully ########')
-printTables()
+#printTables()
 
 
 ########################SECOND PASS######################
@@ -433,8 +435,10 @@ def getLiteralPool(offset,num_ins):
 def assignLiteralPool(startAdd):
 	nextAdd = startAdd
 	for i in literalTable:
-		literalTable[i].physicalAdd = nextAdd
-		nextAdd+=literalTable[i].size
+		literalTable[i].physicalAdd = []
+		for j in range(0,literalTable[i].size):
+			literalTable[i].physicalAdd+=[nextAdd]
+			nextAdd+=1
 	return(nextAdd)
 
 def getDataPool(offset,literalPoolAdd,nextAdd,num_ins):
@@ -475,36 +479,51 @@ def checkOperands():
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
 		code = instructionTable[i][1][0]
-		'''
 		if(code=='ADD' or code=='MUL' or code=='LAC' or code=='DSP' or code=='SUB'):
-			if(instruction[1] in literalTable):
+			if(instruction[1] in symbolTable):
+				if(symbolTable[instruction[1]].status=='undefined'):
+					exceptionFlag=True
+					print("Error in instruction",*instruction)
+					print("Exception: "+code, "cannot have undeclared variable as operand.")
+					sys.exit()
+			elif(instruction[1] in literalTable):
 		 		pass
 			elif(dataTable[int(instruction[1])]=='undefined'):
 		 		exceptionFlag=True
 		 		print("Error in instruction",*instruction)
 		 		print("Exception: "+code, "cannot have undefined address as operand.")
-		'''
+		 		sys.exit()
 		if(code=='BRN' or code=='BRP' or code=='BRZ'):
 			if(instruction[1] not in labelTable):
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: "+code, "has an undeclared label: "+instruction[1]+" as operand.")
+				sys.exit()
 		if(code=='SAC' or code=='INP'):
 			if(instruction[1] in literalTable):
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: "+code, "can only have address/variable as operand.")
+				sys.exit()
 		if(code=='DIV'):
-			if(instruction[1] in literalTable):
+			if(instruction[1] in symbolTable):
+				if(symbolTable[instruction[1]].status=='undefined'):
+					exceptionFlag=True
+					print("Error in instruction",*instruction)
+					print("Exception: "+code, "cannot have undeclared variable as operand.")
+					sys.exit()
+			elif(instruction[1] in literalTable):
 				pass
 			elif(dataTable[int(instruction[1])]=='undefined'):
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: "+code, "should have first operand as address/variable or constant. "+instruction[1]+" is an undefined address.")
+				sys.exit()
 			if(instruction[2] in literalTable or instruction[3] in literalTable):
 				exceptionFlag=True
 				print("Error in instruction",*instruction)
 				print("Exception: "+code, "should have second and third operands as valid addresses/variables.")
+				sys.exit()
 
 def convertOpcodes():
 	for i in range(0,len(instructionTable)):
@@ -519,7 +538,7 @@ def convertOperands():
 			if(instruction[k] in labelTable):
 				instructionTable[i][1][k] = labelTable[instruction[k]].physicalAdd
 			elif(instruction[k] in literalTable):
-				instructionTable[i][1][k] = bin12(literalTable[instruction[k]].physicalAdd)
+				instructionTable[i][1][k] = bin12(literalTable[instruction[k]].physicalAdd[0])
 			elif(instruction[k] in symbolTable):
 				instructionTable[i][1][k] = bin12(symbolTable[instruction[k]].physicalAdd)
 			elif(int(instruction[k]) in dataTable):
