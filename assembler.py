@@ -44,8 +44,9 @@ class LabelField:
 class SymbolField:
 	def __init__(self):
 		self.physicalAdd=None
+		self.status='undefined'
 	def printThis(self):
-		print("P.Add:",self.physicalAdd)
+		print("P.Add:",self.physicalAdd,", Status:",str(self.status))
 
 class MacroField:
 	def __init__(self,macroparameters):
@@ -376,7 +377,7 @@ if endEncountered==False:
 	# sys.exit()
 if exceptionFlag==False:
 	print('######## SUCCESS: First pass ended successfully ########')
-#printTables()
+printTables()
 
 
 ########################SECOND PASS######################
@@ -434,6 +435,35 @@ def assignLiteralPool(startAdd):
 	for i in literalTable:
 		literalTable[i].physicalAdd = nextAdd
 		nextAdd+=literalTable[i].size
+	return(nextAdd)
+
+def getDataPool(offset,literalPoolAdd,nextAdd,num_ins):
+	totalMem = len(symbolTable)
+	startAdd = False
+	occAddresses = list(dataTable.keys())
+	for i in range(0,num_ins):
+		occAddresses+=[i+offset]
+	for j in range(literalPoolAdd,nextAdd):
+		occAddresses+=[j]
+	occAddresses=sorted(occAddresses)
+	for k in range(1,len(occAddresses)):
+		if(occAddresses[k]-occAddresses[k-1]>totalMem):
+			startAdd=occAddresses[k-1]+1
+			break
+	if startAdd==False:
+		global exceptionFlag
+		exceptionFlag=True
+		print("Exception: Not enough space for complete program")
+		sys.exit()
+	else:
+		return(startAdd)
+
+def assignDataPool(startAdd):
+	nextAdd = startAdd
+	for i in symbolTable:
+		symbolTable[i].physicalAdd = nextAdd
+		nextAdd+=1
+	return(nextAdd)
 
 def removeLabelDefinitions():
 	for i in range(0,len(instructionTable)):
@@ -445,13 +475,15 @@ def checkOperands():
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
 		code = instructionTable[i][1][0]
-		# if(code=='ADD' or code=='MUL' or code=='LAC' or code=='DSP' or code=='SUB'):
-		# 	if(instruction[1] in literalTable):
-		# 		pass
-		# 	elif(dataTable[int(instruction[1])]=='undefined'):
-		# 		exceptionFlag=True
-		# 		print("Error in instruction",*instruction)
-		# 		print("Exception: "+code, "cannot have undefined address as operand.")
+		'''
+		if(code=='ADD' or code=='MUL' or code=='LAC' or code=='DSP' or code=='SUB'):
+			if(instruction[1] in literalTable):
+		 		pass
+			elif(dataTable[int(instruction[1])]=='undefined'):
+		 		exceptionFlag=True
+		 		print("Error in instruction",*instruction)
+		 		print("Exception: "+code, "cannot have undefined address as operand.")
+		'''
 		if(code=='BRN' or code=='BRP' or code=='BRZ'):
 			if(instruction[1] not in labelTable):
 				exceptionFlag=True
@@ -488,6 +520,8 @@ def convertOperands():
 				instructionTable[i][1][k] = labelTable[instruction[k]].physicalAdd
 			elif(instruction[k] in literalTable):
 				instructionTable[i][1][k] = bin12(literalTable[instruction[k]].physicalAdd)
+			elif(instruction[k] in symbolTable):
+				instructionTable[i][1][k] = bin12(symbolTable[instruction[k]].physicalAdd)
 			elif(int(instruction[k]) in dataTable):
 				instructionTable[i][1][k] = bin12(int(instruction[k]))
 
@@ -514,7 +548,9 @@ def writeToFile():
 offset = getValidAddress(num_ins)
 addOffset(offset)
 literalPoolAdd = getLiteralPool(offset,num_ins)
-assignLiteralPool(literalPoolAdd)
+nextAdd = assignLiteralPool(literalPoolAdd)
+variablePoolAdd = getDataPool(offset,literalPoolAdd,nextAdd,num_ins)
+assignDataPool(variablePoolAdd)
 removeLabelDefinitions()
 checkOperands()
 if exceptionFlag==False:
@@ -523,6 +559,7 @@ if exceptionFlag==False:
 	convertOperands()
 	writeToFile()
 	printTables()
+
 
 ####keep in mind#######
 ## |X| for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
