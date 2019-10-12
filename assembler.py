@@ -383,7 +383,17 @@ if exceptionFlag==False:
 
 
 ########################SECOND PASS######################
-def getValidAddress(num_ins):
+def getOffset(num_ins):
+	'''
+	Input parameters: Number of instructions present in instruction table.
+
+	Returns: Offset/Starting address for instruction table, to be stored 
+	in a contiguous memory space.
+
+	Throws "Not enough space" exception if instruction table size is larger
+	than available memory, or if a contiguous memory space cannot be found.
+
+	'''
 	totalIns=num_ins+1
 	dataset=list(dataTable.keys())
 	dataset=sorted(dataset)
@@ -394,6 +404,9 @@ def getValidAddress(num_ins):
 			offset=dataset[i-1]+1
 			break
 	if offset==False:
+		if((dataset[-1]+num_ins+1)<4096):
+			offset = dataset[-1]+1
+	if offset==False:
 		global exceptionFlag
 		exceptionFlag=True
 		print("Exception: Not enough space for complete program")
@@ -403,7 +416,9 @@ def getValidAddress(num_ins):
 
 def addOffset(offset):
 	'''
-	Maps the instructions and labels in Instruction Table and Label Table to
+	Input: Offset calculated for binding of instructions and labels.
+
+	Operation: Maps the instructions and labels in Instruction Table and Label Table to
 	physical addresses by adding offset
 	'''
 	for i in range(0,len(instructionTable)):
@@ -412,6 +427,15 @@ def addOffset(offset):
 		labelTable[j].physicalAdd = bin12(int(labelTable[j].virtualAdd,2)+offset)
 
 def getLiteralPool(offset,num_ins):
+	'''
+	Input: offset for Instruction table and total number of instructions.
+
+	Returns: Offset/Starting address for literal pool, to be stored 
+	in a contiguous memory space.
+
+	Throws "Not enough space" exception if literal pool is larger
+	than available memory, or if a contiguous memory space cannot be found.
+	'''
 	totalMem = 0
 	startAdd = False
 	for i in literalTable:
@@ -425,6 +449,9 @@ def getLiteralPool(offset,num_ins):
 			startAdd=occAddresses[k-1]+1
 			break
 	if startAdd==False:
+		if((occAddresses[-1]+totalMem+1)<4096):
+			startAdd = occAddresses[-1]+1
+	if startAdd==False:
 		global exceptionFlag
 		exceptionFlag=True
 		print("Exception: Not enough space for complete program")
@@ -433,6 +460,11 @@ def getLiteralPool(offset,num_ins):
 		return startAdd
 
 def assignLiteralPool(startAdd):
+	'''
+	Input: Starting address for literal pool
+
+	Operation: Assigns physical addresses for literals for binding.
+	'''
 	nextAdd = startAdd
 	for i in literalTable:
 		literalTable[i].physicalAdd = []
@@ -441,7 +473,17 @@ def assignLiteralPool(startAdd):
 			nextAdd+=1
 	return(nextAdd)
 
-def getDataPool(offset,literalPoolAdd,nextAdd,num_ins):
+def getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins):
+	'''
+	Input: offset for Instruction table, literal pool starting and ending addresses,
+	total number of instructions.
+
+	Returns: Offset/Starting address for variables in symbol table, to be stored 
+	in a contiguous memory space.
+
+	Throws "Not enough space" exception if variable pool is larger
+	than available memory, or if a contiguous memory space cannot be found.
+	'''
 	totalMem = len(symbolTable)
 	startAdd = False
 	occAddresses = list(dataTable.keys())
@@ -455,6 +497,9 @@ def getDataPool(offset,literalPoolAdd,nextAdd,num_ins):
 			startAdd=occAddresses[k-1]+1
 			break
 	if startAdd==False:
+		if((occAddresses[-1]+totalMem+1)<4096):
+			startAdd = occAddresses[-1]+1
+	if startAdd==False:
 		global exceptionFlag
 		exceptionFlag=True
 		print("Exception: Not enough space for complete program")
@@ -462,7 +507,12 @@ def getDataPool(offset,literalPoolAdd,nextAdd,num_ins):
 	else:
 		return(startAdd)
 
-def assignDataPool(startAdd):
+def assignSymbolPool(startAdd):
+	'''
+	Input: Starting address for variable pool
+
+	Operation: Assigns physical addresses for variables for binding.
+	'''
 	nextAdd = startAdd
 	for i in symbolTable:
 		symbolTable[i].physicalAdd = nextAdd
@@ -470,11 +520,24 @@ def assignDataPool(startAdd):
 	return(nextAdd)
 
 def removeLabelDefinitions():
+	'''
+	Operation: Removes label declarations from the instruction table
+	for conversion to machine language.
+	'''
 	for i in range(0,len(instructionTable)):
 		if(instructionTable[i][1][0].find(":")!=(-1)):
 			del instructionTable[i][1][0]
 
 def checkOperands():
+	'''
+	Operation: Checks validity of operands corresponding to opcodes.
+	ADD, MUL, LAC, SUB: Only have defined variables/addresses or literals.
+	DSP: Only has defined variable/address.
+	BRN, BRP, BRZ: Only have defined label.
+	SAC, INP: Only have defined/undefined variables/addresses
+	DIV: Only has first operand as defined variable/address or literal, second and third operands as 
+	defined/undefined variables/addresses 
+	'''
 	global exceptionFlag
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
@@ -526,12 +589,18 @@ def checkOperands():
 				sys.exit()
 
 def convertOpcodes():
+	'''
+	Operation: Convert opcodes in instruction table to machine language.
+	'''
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
 		code = instructionTable[i][1][0]
 		instructionTable[i][1][0] = opcodes[code]
 
 def convertOperands():
+	'''
+	Operation: Convert operands to the physical adresses they are bound to.
+	'''
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
 		for k in range(1,len(instruction)):
@@ -545,6 +614,11 @@ def convertOperands():
 				instructionTable[i][1][k] = bin12(int(instruction[k]))
 
 def writeToFile():
+	'''
+	Operation: Write generated machine code to text file named:
+	<sample_file>_output.txt
+	Splits machine code into blocks of four bits for readability.
+	'''
 	f = open(path+"_output.txt","w+")
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
@@ -564,12 +638,12 @@ def writeToFile():
 
 
 ############MAIN CODE##############
-offset = getValidAddress(num_ins)
+offset = getOffset(num_ins)
 addOffset(offset)
 literalPoolAdd = getLiteralPool(offset,num_ins)
 nextAdd = assignLiteralPool(literalPoolAdd)
-variablePoolAdd = getDataPool(offset,literalPoolAdd,nextAdd,num_ins)
-assignDataPool(variablePoolAdd)
+variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
+assignSymbolPool(variablePoolAdd)
 removeLabelDefinitions()
 checkOperands()
 if exceptionFlag==False:
@@ -590,6 +664,7 @@ if exceptionFlag==False:
 #____________________PSEUDO CODE FOR SECOND PASS__________________
 #|X| Add offset to instructions and labels
 #|X| Find location for literals (have to deal with literals > 12 bits)
+# Find location for variable pool
 #|X| Remove labels from label definitions in instructions
 #|X| Traverse instruction by instruction:
 	#|X| Convert opcode to m/c
