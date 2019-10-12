@@ -67,7 +67,7 @@ macroTable = {}
 symbolTable={}
 instructionTable=[]
 macroCallcount={}    #stores the number of calls for each macro present in the macro table
-
+LoadAddress = 0		#stores the physical address to load instructions
 instructions = []
 num_ins = -1                      #counter to count number of instructions
 foundMacroDefinition=False       #flag to check if a macro is being defined
@@ -293,14 +293,19 @@ f = open(path+".txt",'r')
 endEncountered=False
 instruction = f.readline()
 while instruction:
-	if instruction=="END\n":            #if end is encountered, stop execution
+	if instruction=="END" or instruction=="END\n":            #if end is encountered, stop execution
 		endEncountered=True
 		break
 	if(len(instruction)==1):          #check for empty lines
 		instruction = f.readline()
 		continue
 	instruction =refine(instruction)
-	if len(instruction)==0 or instruction[0]=='START':             #check if the line is just a comment
+	if len(instruction)==0:             #check if the line is just a comment
+		instruction = f.readline()
+		continue
+	if instruction[0]=='START':
+		if(len(instruction)==2):
+			LoadAddress = instruction[1]
 		instruction = f.readline()
 		continue
 	
@@ -399,11 +404,18 @@ def getOffset(num_ins):
 	dataset=sorted(dataset)
 	#maxInstructionSize=0
 	offset=False
-	for i in range(1,len(dataset)):
-		if (dataset[i]-dataset[i-1]>totalIns):
-			offset=dataset[i-1]+1
-			break
-	if offset==False:
+	if(len(dataset)>1):
+		for i in range(1,len(dataset)):
+			if (dataset[i]-dataset[i-1]>totalIns):
+				offset=dataset[i-1]+1
+				break
+	if(len(dataset)==1):
+		if((dataset[-1]+num_ins+1)<4096):
+			offset = dataset[-1]+1
+	if(len(dataset)==0):
+		offset = 0
+		return(offset)
+	if (offset==False and len(dataset)!=0):
 		if((dataset[-1]+num_ins+1)<4096):
 			offset = dataset[-1]+1
 	if offset==False:
@@ -556,6 +568,13 @@ def checkOperands():
 		 		print("Error in instruction",*instruction)
 		 		print("Exception: "+code, "cannot have undefined address as operand.")
 		 		sys.exit()
+		if(code=="DSP"):
+			if(instruction[1] in symbolTable):
+				pass
+			if(instruction[1] in literalTable):
+				print("Error in instruction",*instruction)
+				print("Exception: "+code, "cannot have literal as operand.")
+				sys.exit()
 		if(code=='BRN' or code=='BRP' or code=='BRZ'):
 			if(instruction[1] not in labelTable):
 				exceptionFlag=True
@@ -638,12 +657,17 @@ def writeToFile():
 
 
 ############MAIN CODE##############
+literalPoolAdd = 0
+variablePoolAdd = 0
+nextAdd = 0
 offset = getOffset(num_ins)
 addOffset(offset)
-literalPoolAdd = getLiteralPool(offset,num_ins)
-nextAdd = assignLiteralPool(literalPoolAdd)
-variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
-assignSymbolPool(variablePoolAdd)
+if(len(literalTable)!=0):
+	literalPoolAdd = getLiteralPool(offset,num_ins)
+	nextAdd = assignLiteralPool(literalPoolAdd)
+if(len(symbolTable)!=0):
+	variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
+	assignSymbolPool(variablePoolAdd)
 removeLabelDefinitions()
 checkOperands()
 if exceptionFlag==False:
@@ -653,61 +677,4 @@ if exceptionFlag==False:
 	writeToFile()
 	printTables()
 
-
-####keep in mind#######
-## |X| for add,mul,lac,dsp and sub operand should be a defined address or a constant (not undefined address)
-## |X| brn , brz, brp should have a defined valid label (pass 2)
-## |X| sac,inp should have a defined or undefined address (not a constant)
-## |X| div should have first as defined address or constant, second and third can be defined or undefined address but not a constant
-
-
-#____________________PSEUDO CODE FOR SECOND PASS__________________
-#|X| Add offset to instructions and labels
-#|X| Find location for literals (have to deal with literals > 12 bits)
-# Find location for variable pool
-#|X| Remove labels from label definitions in instructions
-#|X| Traverse instruction by instruction:
-	#|X| Convert opcode to m/c
-	#|X| Based upon opcode, check if the parameters are allowed:
-		#Refer to (keep in mind) points
-	#|X| Convert parameters to valid addresses using:
-		#data table
-		#label table
-		#literal table
-#|X| Write the m/c to a file (named as testX_output.txt)
-
-
-#__________________POINTS TO DISCUSS________________________
-#|X| Where to have the literal pool?
-#|X| Segmentation of code?
-#|X| Returning starting address for literals that consume more space
-#|X| MULTWO 157 158 19 shows 19 as an undefined address and gives error for DSP 19
-'''
-	MULTWO MACRO A,B,C
-	LAC A
-	L4: MUL B
-	SAC C
-	BRN L4
-	MEND
-
-	CLA; clears the accumulator
-	INP 157
-	INP 158
-	MULTWO 157 158 19
-	L1: LAC 157
-	BRN L1
-	DSP 19
-	INP 170
-	INP 180
-	CLA
-	MULTWO 158 170 180
-	CLA
-	BRZ L2
-	L2: STP
-	END
-'''
-
-
-#Can we report the number of errors and print a stack instead
-#	of throwing errors one by one
-# |X| START? END or STP?
+print(LoadAddress)
