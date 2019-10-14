@@ -124,6 +124,11 @@ def removeComments(instruction):
 bin12 = lambda x : ''.join(reversed([str((x >> i) & 1) for i in range(12)] ) )   #returns 12 bit binary address
 
 def checkMacro(instruction):    #Check if a macro has been declared or it has ended
+	'''
+	Input: Instruction
+
+	Operation: Checking for beginning and ending of Macro definition.
+	'''
 	if len(instruction)>=2:
 		if("MACRO" in instruction[1]):
 			return True
@@ -132,6 +137,13 @@ def checkMacro(instruction):    #Check if a macro has been declared or it has en
 		return False
 
 def addMacro(macro,fields):   #Add macro to Macro table
+	'''
+	Input: Macro name and parameters.
+
+	Operation: Adds the macro and it's parameters to the macro table.
+
+	Throws MACRO defined more than once exception.
+	'''
 	if macro not in macroTable:
 		macroTable[macro]=MacroField(fields)
 		macroCallcount[macro]=0
@@ -143,11 +155,27 @@ def addMacro(macro,fields):   #Add macro to Macro table
 		sys.exit()
 
 def getLabel(instruction):    #Returns label if present in the instruction
+	'''
+	Input: Instruction from instruction table
+
+	Returns: True if label definition is found, else, returns False.
+	'''
 	if instruction[0].find(':')!=-1:
 		return instruction[0][:-1]
 	return False
 
 def addLabel(label, address,code,instruction): #Adds detected label to label table
+	'''
+	Input: label name, label declaration address, part of program to which the label belongs (macro body/main).
+
+	Operation: Adds detected label to the label table
+
+	Throws exception if detected label is invalid:
+		Already used as variable, 
+	or, contains the name of a macro,
+	or, has been defined more than once,
+	or, has the same name as a valid opcode.
+	'''
 	global exceptionFlag
 	if label in symbolTable:
 		exceptionFlag=True
@@ -180,6 +208,13 @@ def addLabel(label, address,code,instruction): #Adds detected label to label tab
 			sys.exit()
 
 def addData(parameters,opcode):       #Adds the parameters in the datatable and literal table
+	'''
+	Input: Opcode and operands following the opcode for given instruction.
+
+	Operation: Adds operands to the dataTable/ literalTable/ symbolTable.
+
+	Throws : Memory Address out of bounds error.
+	'''
 	global exceptionFlag
 	for i in range(len(parameters)):
 		x=getLiteral(parameters[i])             #if literal found, add it to the literal table
@@ -202,7 +237,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							exceptionFlag=True
 							print("Error in instruction",opcode,*parameters)
 							print("Exception: Address supplied exceeds memory limit. It should be lesser than 12 bits, that is 4096. Address",i,"is not a valid address.")
-							# sys.exit()
+							#sys.exit()
 				except:
 					if (opcode in ["INP","ADD","SUB","LAC","SAC","DSP","MUL","DIV"]): 
 						if parameters[i] not in labelTable:
@@ -216,24 +251,41 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							print("Exception:",opcode,"cannot take labels as parameters")
 
 def getLiteral(token): #Checks if passed instruction contains literals
+	'''
+	Input: Operand for given instruction.
+
+	Returns: Literal if found, else, returns False.
+	'''
 	if(token[0]=="'" and token[-1]=="'"):
 		return(token)
 	return False
 
 def addLiteral(literal): #Adds literals to Literal Table
+	'''
+	Input: Detected Literal.
+
+	Operation: Adds newly detected literal to literal table.
+	'''
 	if literal not in literalTable:
 		literalTable[literal]=LiteralField(literal)
 
 def refine(instruction):  #Case handling and divide the instruction in Labels, opcode and parameters
+	'''
+	Input: Instruction
+
+	Operation: Removes comments, splits instruction into opcode and operands.
+	'''
 	instruction = instruction.upper()
 	instruction = removeComments(instruction)
 	instruction = list(instruction.split())
 	return instruction
 
-def getVirtualAddress(num_ins): #Returns a virtual 12-bit binary address for the instruction
-	return bin12(num_ins)
-
 def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the assembly program
+	'''
+	Input: Macro name, macro parameters and number of instructions.
+
+	Operation: Maps actual and formal parameters and expands the macro call in the instruction table.
+	'''
 	global exceptionFlag
 	macroCallcount[name]+=1
 	newLabelnames=[]
@@ -247,7 +299,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		print("Exception: Macro",name,"takes",len(macroTable[name].macroparameters),"parameters but",len(parameters),"were given.")
 		sys.exit()
 	for instruction in copiedInstructionset:
-		vAddress=getVirtualAddress(num_ins)             
+		vAddress=bin12(num_ins)             
 		label=getLabel(instruction)
 		if label!=False:
 			instruction[0]=newLabelnames[macroTable[name].labels.index(label)]+":"
@@ -350,7 +402,7 @@ while instruction:
 
 	else:	
 		num_ins+=1
-		vAddress=getVirtualAddress(num_ins)
+		vAddress=bin12(num_ins)
 		label=getLabel(instruction)
 		if(label!=False):    #label is present
 			addLabel(label, vAddress,"Main",instruction)
@@ -677,4 +729,4 @@ if exceptionFlag==False:
 	writeToFile()
 	printTables()
 
-print(LoadAddress)
+#print(LoadAddress)
