@@ -83,6 +83,8 @@ def printLabelTable():
 def printSymbolTable():
 	for i in symbolTable:
 		print(i)
+		if(symbolTable[i].physicalAdd!=None):
+			symbolTable[i].physicalAdd = bin8(symbolTable[i].physicalAdd)
 		symbolTable[i].printThis()
 def printInstructionTable():
 	for i in instructionTable:
@@ -90,6 +92,9 @@ def printInstructionTable():
 def printLiteralTable():
 	for i in literalTable:
 		print(i)
+		if(literalTable[i].physicalAdd!=None):
+			for k in range(0,len(literalTable[i].physicalAdd)):
+				literalTable[i].physicalAdd[k] = bin8(literalTable[i].physicalAdd[k])
 		literalTable[i].printThis()
 
 def removeComments(instruction):
@@ -448,6 +453,7 @@ if endEncountered==False:
 	sys.exit()
 if exceptionFlag==False:
 	print('######## SUCCESS: First pass ended successfully ########')
+	num_ins+=1
 printTables()
 
 
@@ -477,6 +483,7 @@ def getOffset(num_ins):
 				sys.exit()
 		print("numins",num_ins)
 		if int(LoadAddress)+num_ins<256:
+			offset = LoadAddress
 			return int(LoadAddress)
 		else:
 			print("Error at instruction START",LoadAddress)
@@ -535,6 +542,9 @@ def getLiteralPool(offset,num_ins):
 	for j in range(0,num_ins):
 		occAddresses+=[j+offset]
 	occAddresses = sorted(occAddresses)
+	if(totalMem<occAddresses[0]):
+		startAdd = occAddresses[0]-totalMem
+		return(startAdd)
 	for k in range(1,len(occAddresses)):
 		if (occAddresses[k]-occAddresses[k-1]>totalMem):
 			startAdd=occAddresses[k-1]+1
@@ -749,10 +759,7 @@ if(len(symbolTable)!=0):
 	variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
 	assignSymbolPool(variablePoolAdd)
 removeLabelDefinitions()
-try:
-	checkOperands()
-except:
-	pass
+checkOperands()
 
 if exceptionFlag==False:
 	print('######## SUCCESS: Second pass ended successfully ########')
