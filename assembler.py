@@ -2,23 +2,6 @@ from opcodes import opcodes,opcode_arguments
 import copy
 import sys
 
-########################FIRST PASS######################
-'''
-Errors handled in first pass:
- 1. Multiple macro definitions
- 2. Invalid Label name (Label cannot have a macro name in it and it cannot be an opcode name)
- 3. Multiple label definitions
- 4. Address supplied should be lesser than 12 bits=4096.
- 5. Incorrect number of parameters supplied in a macro
- 6. Not enough space for complete program
- 7. Incorrect number of parameters supplied for an opcode
- 8. END of program not found
- 9. MEND/ENDM for macro not found
-10. Invalid opcode name/Macro name
-11. Unidentified symbol used in a macro
-12. Defined label names cannot be used as variable names and vice versa
-
-'''
 #########classes required#########
 exceptionFlag=False
 class LiteralField:
@@ -26,7 +9,7 @@ class LiteralField:
 		self.value=literal.replace("'","")
 		self.size=1
 		i=1
-		while(((2**((12*i)-1)//2)-1)<abs(float(self.value))):      #if the constant value is very large, allocate it more memory spaces
+		while(((2**((8*i)-1)//2)-1)<abs(float(self.value))):      #if the constant value is very large, allocate it more memory spaces
 			self.size+=1
 			i+=1
 		self.physicalAdd=None
@@ -121,7 +104,7 @@ def removeComments(instruction):
 		instruction = instruction[0:instruction.find(";")]
 	return(instruction)
 
-bin12 = lambda x : ''.join(reversed([str((x >> i) & 1) for i in range(12)] ) )   #returns 12 bit binary address
+bin8 = lambda x : ''.join(reversed([str((x >> i) & 1) for i in range(8)] ) )   #returns 8 bit binary address
 
 def checkMacro(instruction):    #Check if a macro has been declared or it has ended
 	'''
@@ -225,7 +208,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 				try:
 					parameters[i]=int(parameters[i])
 					if parameters[i] not in dataTable:
-						if -1<parameters[i]<4096:
+						if -1<parameters[i]<256:
 							if opcode=="INP" or opcode=="SAC":
 								dataTable[parameters[i]]="defined"
 							# if opcode=="SAC" and len(instructionTable)>0:     ##if we consider that cla should result to 0 value, in which case store 0 would be a defined address
@@ -236,7 +219,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 						else:
 							exceptionFlag=True
 							print("Error in instruction",opcode,*parameters)
-							print("Exception: Address supplied exceeds memory limit. It should be lesser than 12 bits, that is 4096. Address",i,"is not a valid address.")
+							print("Exception: Address supplied exceeds memory limit. It should be lesser than 8 bits, that is 256. Address",i,"is not a valid address.")
 							#sys.exit()
 				except:
 					if (opcode in ["INP","ADD","SUB","LAC","SAC","DSP","MUL","DIV"]): 
@@ -249,6 +232,11 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							exceptionFlag=True
 							print("Error in instruction",opcode,*parameters)
 							print("Exception:",opcode,"cannot take labels as parameters")
+			if(opcode=="DIV"):
+				symbolTable['R1'] = SymbolField() # R1 stores the quotient
+				symbolTable['R1'].status = "defined"
+				symbolTable['R2'] = SymbolField() # R2 stores the remainder
+				symbolTable['R2'].status = "defined"
 
 def getLiteral(token): #Checks if passed instruction contains literals
 	'''
@@ -299,7 +287,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		print("Exception: Macro",name,"takes",len(macroTable[name].macroparameters),"parameters but",len(parameters),"were given.")
 		sys.exit()
 	for instruction in copiedInstructionset:
-		vAddress=bin12(num_ins)             
+		vAddress=bin8(num_ins)             
 		label=getLabel(instruction)
 		if label!=False:
 			instruction[0]=newLabelnames[macroTable[name].labels.index(label)]+":"
@@ -402,7 +390,7 @@ while instruction:
 
 	else:	
 		num_ins+=1
-		vAddress=bin12(num_ins)
+		vAddress=bin8(num_ins)
 		label=getLabel(instruction)
 		if(label!=False):    #label is present
 			addLabel(label, vAddress,"Main",instruction)
@@ -462,13 +450,13 @@ def getOffset(num_ins):
 				offset=dataset[i-1]+1
 				break
 	if(len(dataset)==1):
-		if((dataset[-1]+num_ins+1)<4096):
+		if((dataset[-1]+num_ins+1)<256):
 			offset = dataset[-1]+1
 	if(len(dataset)==0):
 		offset = 0
 		return(offset)
 	if (offset==False and len(dataset)!=0):
-		if((dataset[-1]+num_ins+1)<4096):
+		if((dataset[-1]+num_ins+1)<256):
 			offset = dataset[-1]+1
 	if offset==False:
 		global exceptionFlag
@@ -486,9 +474,9 @@ def addOffset(offset):
 	physical addresses by adding offset
 	'''
 	for i in range(0,len(instructionTable)):
-		instructionTable[i][0] = bin12(int(instructionTable[i][0],2)+offset)
+		instructionTable[i][0] = bin8(int(instructionTable[i][0],2)+offset)
 	for j in labelTable:
-		labelTable[j].physicalAdd = bin12(int(labelTable[j].virtualAdd,2)+offset)
+		labelTable[j].physicalAdd = bin8(int(labelTable[j].virtualAdd,2)+offset)
 
 def getLiteralPool(offset,num_ins):
 	'''
@@ -513,7 +501,7 @@ def getLiteralPool(offset,num_ins):
 			startAdd=occAddresses[k-1]+1
 			break
 	if startAdd==False:
-		if((occAddresses[-1]+totalMem+1)<4096):
+		if((occAddresses[-1]+totalMem+1)<256):
 			startAdd = occAddresses[-1]+1
 	if startAdd==False:
 		global exceptionFlag
@@ -561,7 +549,7 @@ def getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins):
 			startAdd=occAddresses[k-1]+1
 			break
 	if startAdd==False:
-		if((occAddresses[-1]+totalMem+1)<4096):
+		if((occAddresses[-1]+totalMem+1)<256):
 			startAdd = occAddresses[-1]+1
 	if startAdd==False:
 		global exceptionFlag
@@ -653,11 +641,6 @@ def checkOperands():
 				print("Error in instruction",*instruction)
 				print("Exception: "+code, "should have first operand as address/variable or constant. "+instruction[1]+" is an undefined address.")
 				sys.exit()
-			if(instruction[2] in literalTable or instruction[3] in literalTable):
-				exceptionFlag=True
-				print("Error in instruction",*instruction)
-				print("Exception: "+code, "should have second and third operands as valid addresses/variables.")
-				sys.exit()
 
 def convertOpcodes():
 	'''
@@ -678,11 +661,11 @@ def convertOperands():
 			if(instruction[k] in labelTable):
 				instructionTable[i][1][k] = labelTable[instruction[k]].physicalAdd
 			elif(instruction[k] in literalTable):
-				instructionTable[i][1][k] = bin12(literalTable[instruction[k]].physicalAdd[0])
+				instructionTable[i][1][k] = bin8(literalTable[instruction[k]].physicalAdd[0])
 			elif(instruction[k] in symbolTable):
-				instructionTable[i][1][k] = bin12(symbolTable[instruction[k]].physicalAdd)
+				instructionTable[i][1][k] = bin8(symbolTable[instruction[k]].physicalAdd)
 			elif(int(instruction[k]) in dataTable):
-				instructionTable[i][1][k] = bin12(int(instruction[k]))
+				instructionTable[i][1][k] = bin8(int(instruction[k]))
 
 def writeToFile():
 	'''
@@ -697,6 +680,9 @@ def writeToFile():
 		for k in range(0,len(instruction)):
 			s+=instruction[k]
 		l = (len(s))
+		if(len(s)==4):
+			s +='00000000'
+		l = len(s)
 		block = 0
 		machine_ins = ''
 		while(block!=l):
@@ -721,12 +707,15 @@ if(len(symbolTable)!=0):
 	variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
 	assignSymbolPool(variablePoolAdd)
 removeLabelDefinitions()
-checkOperands()
+try:
+	checkOperands()
+except:
+	pass
 if exceptionFlag==False:
 	print('######## SUCCESS: Second pass ended successfully ########')
 	convertOpcodes()
 	convertOperands()
 	writeToFile()
-	printTables()
+	#printTables()
 
 #print(LoadAddress)
