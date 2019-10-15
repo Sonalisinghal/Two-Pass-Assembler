@@ -116,8 +116,23 @@ def checkMacro(instruction):    #Check if a macro has been declared or it has en
 		if("MACRO" in instruction[1]):
 			return True
 
-	if("MEND" in instruction or "ENDM" in instruction) and len(instruction)==5:
-		return False
+
+	if("MEND" in instruction or "ENDM" in instruction):
+		global exceptionFlag
+		instruction=refine(instruction)
+		labelsPresent=getLabel(instruction)
+		if labelsPresent!=False:
+				if labelsPresent not in macroTable[name].labels:
+					macroTable[name].labels.append(labelsPresent)
+					if len(instruction)==2:
+						return False
+				else:
+					exceptionFlag=True
+					print("Error in instruction",*instruction)
+					print("Exception: Label",labelsPresent,"has been defined multiple times for macro",name)   #if the label is declared multiple times in a macro
+					sys.exit()
+		elif len(instruction)==1:
+			return False
 
 def addMacro(macro,fields):   #Add macro to Macro table
 	'''
@@ -279,8 +294,10 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 	global exceptionFlag
 	macroCallcount[name]+=1
 	newLabelnames=[]
+	labelsUsed=[]
 	for i in macroTable[name].labels:        #creates new label name set for the macro of the form macroName-
 		newLabelnames.append(str(name)+str(i)+str(macroCallcount[name]))
+		labelsUsed.append(False)
 	
 	copiedInstructionset=copy.deepcopy(macroTable[name].instructionTable)
 	if len(parameters)!=len(macroTable[name].macroparameters):
@@ -294,6 +311,7 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 		if label!=False:
 			instruction[0]=newLabelnames[macroTable[name].labels.index(label)]+":"
 			addLabel(newLabelnames[macroTable[name].labels.index(label)],vAddress,name,instruction)
+			labelsUsed[macroTable[name].labels.index(label)]=True
 			opcodeFrom=1
 		else:     
 			opcodeFrom=0
@@ -324,6 +342,10 @@ def handleMacroCalls(name,parameters,num_ins):   #Expands Macro calls in the ass
 			print("Exception:",opcode,"is not a valid opcode name.")
 			sys.exit()
 		num_ins+=1
+	for i in range(len(labelsUsed)):
+		if (labelsUsed[i]==False):
+			addLabel(newLabelnames[i],bin8(num_ins),name,[newLabelnames[i],'MEND'])
+
 
 	return num_ins-1
 
@@ -426,7 +448,7 @@ if endEncountered==False:
 	sys.exit()
 if exceptionFlag==False:
 	print('######## SUCCESS: First pass ended successfully ########')
-#printTables()
+printTables()
 
 
 ########################SECOND PASS######################
@@ -445,12 +467,21 @@ def getOffset(num_ins):
 	dataset=list(dataTable.keys())
 	dataset=sorted(dataset)
 	#maxInstructionSize=0
+	print("Load",LoadAddress)
 
 	if(LoadAddress!=False):
 		for l in range(0,len(dataset)):
-			if(LoadAddress<=int(dataset[l]) or int(dataset[l])<=(LoadAddress+num_ins)):
-				print("Exception: Unable to load the program at the specified Load Address:", str(LoadAddress) +"\n Conflict with direct address "+str(dataset[l]))
+			if(int(LoadAddress)<=int(dataset[l])<=(int(LoadAddress)+num_ins)):
+				print("Error at instruction START",LoadAddress)
+				print("Exception: Unable to load the program from address:", str(LoadAddress) +"\nas it conflicts with direct address "+str(dataset[l]))
 				sys.exit()
+		print("numins",num_ins)
+		if int(LoadAddress)+num_ins<256:
+			return int(LoadAddress)
+		else:
+			print("Error at instruction START",LoadAddress)
+			print("Exception: Not enough space to load the program from address:", str(LoadAddress))
+			sys.exit()
 	offset=False
 	if(len(dataset)>1):
 		for i in range(1,len(dataset)):
@@ -728,6 +759,6 @@ if exceptionFlag==False:
 	convertOpcodes()
 	convertOperands()
 	writeToFile()
-	#printTables()
+	printTables()
 
 #print(LoadAddress)

@@ -1,0 +1,22 @@
+GREATER MACRO X,Y,RES ;store the greater in X and Y in res
+LAC X
+SAC RES
+SUB Y
+BRP L1
+LAC Y
+SAC RES
+L1: MEND
+    
+START 50
+INP 197
+SAC A
+INP 199
+SAC B
+L1: GREATER A B C
+DSP C
+ADD A
+SAC A
+BRN L1
+ADD '150'
+END
+

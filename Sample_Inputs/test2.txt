@@ -1,4 +1,4 @@
-START 100
+START 290
     CLA
     INP A
     INP B

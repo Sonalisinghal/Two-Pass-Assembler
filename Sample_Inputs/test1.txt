@@ -14,7 +14,7 @@ SAC A
 BRN L4
 MEND
 
-START 150
+START 50
 CLA; clears the accumulator
 INP 157
 INP 158
