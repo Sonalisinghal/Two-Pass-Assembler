@@ -36,7 +36,7 @@ Project Members: <br>
 6. Variable names and label names can be alpha-numeric. However, the same variable cannot be used as a label name and vice versa.
 7. Literals can be of any value, contiguous memory spaces are allotted accordingly.
 9. If the size of the literal uses more than 1 memory space, then only the first is written in the machine code. Remaining memory mapping can be seen from the LiteralTable.
-9. The maximum memory size is 4096 words, which can be stored using 12 bit addresses. If the program size is greater than this, the assembler will throw an error and terminate.
+9. The maximum memory size is 256 words, which can be stored using 8 bit addresses. If the program size is greater than this, the assembler will throw an error and terminate.
 
 ### Macros
 1. Macros can be handled.
@@ -48,7 +48,7 @@ Project Members: <br>
 2. For opcodes BRP, BRN and BRZ, operand should be a defined valid label.
 3. For opcodes SAC, INP and LAC, operand should be an address/variable (not a constant).
 4. For the opcode DSP, operand should be a declared adress/variable, and not a constant.
-4. DIV should have first parameter as declared address/variable or constant, second and third can be address or variable but not a constant. 
+4. DIV should have operand as declared address/variable or constant. 
 
 ---
 
@@ -61,14 +61,12 @@ Example: <br>
 ```
 INP 157
 LAC 157
-DIV 157 90 95
+DIV 157
 ```
 
 |Value|Defined/Undefined|
 |-----|-----------------|
 |157  |Defined          |
-|90   |Undefined        |
-|95   |Undefined        |
 
 ### 2. Label Table
 **Contains all the Labels defined in the main code and the modified labels created after expanding macro calls.**
@@ -91,8 +89,8 @@ ADDTWO 157 '4' 90
 
 |Name     |Virtual Address  |Code     |Physical Address|
 |---------|-----------------|---------|----------------|
-|L1       |000000000000     |Main     |000000000010    |
-|ADDTWOL11|000000000010     |ADDTWO   |000000000100    |
+|L1       |00000000     |Main     |00000010    |
+|ADDTWOL11|00000010     |ADDTWO   |00000100    |
 
 ### 3. Symbol Table
 **Contains all the variables defined in the main code**
@@ -107,8 +105,8 @@ SAC B
 
 |Name |Physical Address |
 |-----|-----------------|
-|A    |000001001010     |
-|B    |000001001110     |
+|A    |01001010     |
+|B    |01001110     |
 
 ### 4. Literal Table 
 **Contains all the constants defined in the code**
@@ -119,14 +117,14 @@ SAC B
 
 Example: <br>
 ```
-ADD '12345'
-SUB '-96'
+ADD '128'
+SUB '-20'
 ```
 
 |Name     |Value    |Size     |Physical Address           |
 |---------|---------|---------|---------------------------|
-|'12345'  |12345    |2        |[000000000010,000000000011] |
-|'-96'    |-96      |1        |000000000100               |
+|'128'  |128    |2        |[00000010,00000011] |
+|'-20'    |-20      |1        |00000100               |
 
 ### 5. Macro Table
 **Contains all the macros and their definitions**
@@ -168,12 +166,12 @@ ADDTWO 157 '4' 90
 
 |Virtual Address |Instruction                             |
 |----------------|----------------------------------------|
-|000000000000    |[L1:,INP,157]                           |
-|000000000001    |[LAC,157]                               |
-|000000000010    |[ADDTWOL11,LAC,157]                     |
-|000000000011    |[ADD,'4']                               |
-|000000000100    |[SAC,90]                                |
-|000000000101    |[BRP,ADDTWOL11]                         |
+|00000000    |[L1:,INP,157]                           |
+|00000001    |[LAC,157]                               |
+|00000010    |[ADDTWOL11,LAC,157]                     |
+|00000011    |[ADD,'4']                               |
+|00000100    |[SAC,90]                                |
+|00000101    |[BRP,ADDTWOL11]                         |
 
 ---
 ## Errors
@@ -200,13 +198,13 @@ Since both label names and variable names can be alpha-numeric, it is possible f
 
 4. **Address supplied is out of bounds**
 
-Since the maximum size of the memory is 12 bit, user cannot access memory cells greater than 4096. This error is thrown if the user tries to access addresses greater than 4096 such as `SAC 12392`
+Since the maximum size of the memory is 8 bit, user cannot access memory cells greater than 256. This error is thrown if the user tries to access addresses greater than 4096 such as `SAC 12392`
 
-![error: Address out of bounds](./Assets/images/error5.png)
+![error: Address out of bounds](./Assets/images/errorMem.png)
 
 5. **Incorrect number of operands supplied for an opcode** 
 
-This error will be throws in the parameters/arguments supplied to the argument is greater than or less than the number of arguments required by the opcode. For example `CLA 88` or `DIV 120 90`
+This error will be throws in the parameters/arguments supplied to the argument is greater than or less than the number of arguments required by the opcode. For example `CLA 88` or `DIV`
 
 ![error: Incorrect number of operands](./Assets/images/error6.png)
 
@@ -255,7 +253,7 @@ This error is rare and will be thrown if the memory spaces occupied by the direc
 
 2. **Opcode can only have address/variable as operand**
 
-Operands supplied for LAC, DSP, INP and second and third operands for DIV should be an address/variable only. No constants or labels allowed. For example, consider: `INP '110'` or `DSP L1` (provided, L1 is a defined label).
+Operands supplied for LAC, DSP, INP should be an address/variable only. No constants or labels allowed. For example, consider: `INP '110'` or `DSP L1` (provided, L1 is a defined label).
 ![error: Opcode can only have address/variable as operand](./Assets/images/pass2error2.png)
 ![error: Opcode can only have address/variable as operand](./Assets/images/pass2error2_2.png)
 
@@ -267,7 +265,7 @@ Operands supplied for BRN, BRZ, BRP should have a defined and valid label. This 
 
 4. **Opcode can only have address or variable or constant as operand**
 
-Operands supplied for ADD, MUL, SUB and first operand for DIV should be a defined address or a constant (not undefined address). For example, `ADD X` will throw an error if the variable `X` is undefined.
+Operands supplied for ADD, MUL, SUB and DIV should be a defined address or a constant (not undefined address). For example, `ADD X` will throw an error if the variable `X` is undefined.
 ![error: Opcode can only have address or variable or constant as operand](./Assets/images/pass2error4.png)
 
 ---
