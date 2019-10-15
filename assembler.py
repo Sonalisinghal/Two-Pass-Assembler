@@ -718,12 +718,16 @@ if(len(symbolTable)!=0):
 	variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
 	assignSymbolPool(variablePoolAdd)
 removeLabelDefinitions()
-checkOperands()
+try:
+	checkOperands()
+except:
+	pass
+
 if exceptionFlag==False:
 	print('######## SUCCESS: Second pass ended successfully ########')
 	convertOpcodes()
 	convertOperands()
 	writeToFile()
-	printTables()
+	#printTables()
 
 #print(LoadAddress)
