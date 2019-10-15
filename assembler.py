@@ -50,7 +50,7 @@ macroTable = {}
 symbolTable={}
 instructionTable=[]
 macroCallcount={}    #stores the number of calls for each macro present in the macro table
-LoadAddress = 0		#stores the physical address to load instructions
+LoadAddress = False		#stores the physical address to load instructions
 instructions = []
 num_ins = -1                      #counter to count number of instructions
 foundMacroDefinition=False       #flag to check if a macro is being defined
@@ -164,6 +164,7 @@ def addLabel(label, address,code,instruction): #Adds detected label to label tab
 		exceptionFlag=True
 		print("Error in instruction",*instruction)
 		print("Exception: Label",label," has also been used as a Variable.")
+		sys.exit()
 
 	else:
 		if label not in opcodes:           #check if label name is not a opcode name
@@ -220,7 +221,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							exceptionFlag=True
 							print("Error in instruction",opcode,*parameters)
 							print("Exception: Address supplied exceeds memory limit. It should be lesser than 8 bits, that is 256. Address",i,"is not a valid address.")
-							#sys.exit()
+							sys.exit()
 				except:
 					if (opcode in ["INP","ADD","SUB","LAC","SAC","DSP","MUL","DIV"]): 
 						if parameters[i] not in labelTable:
@@ -232,6 +233,7 @@ def addData(parameters,opcode):       #Adds the parameters in the datatable and 
 							exceptionFlag=True
 							print("Error in instruction",opcode,*parameters)
 							print("Exception:",opcode,"cannot take labels as parameters")
+							sys.exit()
 			if(opcode=="DIV"):
 				symbolTable['R1'] = SymbolField() # R1 stores the quotient
 				symbolTable['R1'].status = "defined"
@@ -443,6 +445,12 @@ def getOffset(num_ins):
 	dataset=list(dataTable.keys())
 	dataset=sorted(dataset)
 	#maxInstructionSize=0
+
+	if(LoadAddress!=False):
+		for l in range(0,len(dataset)):
+			if(LoadAddress<=int(dataset[l]) or int(dataset[l])<=(LoadAddress+num_ins)):
+				print("Exception: Unable to load the program at the specified Load Address:", str(LoadAddress) +"\n Conflict with direct address "+str(dataset[l]))
+				sys.exit()
 	offset=False
 	if(len(dataset)>1):
 		for i in range(1,len(dataset)):
@@ -677,17 +685,20 @@ def writeToFile():
 	for i in range(0,len(instructionTable)):
 		instruction = instructionTable[i][1]
 		s = ''
+		s+=instructionTable[i][0]
 		for k in range(0,len(instruction)):
 			s+=instruction[k]
 		l = (len(s))
-		if(len(s)==4):
+		if(len(s)==12):
 			s +='00000000'
 		l = len(s)
 		block = 0
 		machine_ins = ''
-		while(block!=l):
-			machine_ins+=s[block:block+4]+" "
-			block+=4
+		machine_ins+=s[block:block+8]+" "
+		block+=8
+		machine_ins+=s[block:block+4]+" "
+		block+=4
+		machine_ins+=s[block:]
 		machine_ins+="\n"
 		f.write(machine_ins)
 		print(machine_ins)
@@ -707,15 +718,12 @@ if(len(symbolTable)!=0):
 	variablePoolAdd = getSymbolPool(offset,literalPoolAdd,nextAdd,num_ins)
 	assignSymbolPool(variablePoolAdd)
 removeLabelDefinitions()
-try:
-	checkOperands()
-except:
-	pass
+checkOperands()
 if exceptionFlag==False:
 	print('######## SUCCESS: Second pass ended successfully ########')
 	convertOpcodes()
 	convertOperands()
 	writeToFile()
-	#printTables()
+	printTables()
 
 #print(LoadAddress)
